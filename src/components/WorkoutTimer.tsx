@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import ExerciseIllustration from './ExerciseIllustration';
 import { Exercise } from '@/types/exercise';
-import { Button } from '@/components/ui/button-minimal';
-import { Progress } from '@/components/ui/progress';
-import { Play, Pause, SkipForward, RotateCcw, CheckCircle, X, Bookmark } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Play, Pause, X, Bookmark } from 'lucide-react';
 
 interface WorkoutTimerProps {
   exercises: Exercise[];
@@ -14,60 +12,52 @@ interface WorkoutTimerProps {
 
 const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onExit, onSaveWorkout }) => {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(exercises[0]?.duration || 0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-
-  const currentExercise = exercises[currentExerciseIndex];
-  const totalExercises = exercises.length;
-  const overallProgress = ((currentExerciseIndex + (1 - timeRemaining / currentExercise?.duration)) / totalExercises) * 100;
+  const [timeLeft, setTimeLeft] = useState(exercises[0]?.duration || 0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentPhase, setCurrentPhase] = useState<'workout' | 'rest' | 'complete'>('workout');
 
   useEffect(() => {
-    if (currentExercise && timeRemaining !== currentExercise.duration) {
-      setTimeRemaining(currentExercise.duration);
-    }
-  }, [currentExerciseIndex, currentExercise]);
+    setTimeLeft(exercises[currentExerciseIndex]?.duration || 0);
+  }, [currentExerciseIndex, exercises]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isPlaying && timeRemaining > 0 && !isCompleted) {
+    if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            // Move to next exercise or complete workout
-            if (currentExerciseIndex < exercises.length - 1) {
-              setCurrentExerciseIndex(idx => idx + 1);
-              return exercises[currentExerciseIndex + 1].duration;
-            } else {
-              setIsCompleted(true);
-              setIsPlaying(false);
-              return 0;
-            }
-          }
-          return prev - 1;
-        });
+        setTimeLeft(prev => prev - 1);
       }, 1000);
+    } else if (timeLeft === 0 && currentPhase === 'workout') {
+      // Exercise finished
+      const exercise = exercises[currentExerciseIndex];
+      if (exercise.restAfter && exercise.restAfter > 0) {
+        setCurrentPhase('rest');
+        setTimeLeft(exercise.restAfter);
+        setIsRunning(true);
+      } else {
+        handleNext();
+      }
+    } else if (timeLeft === 0 && currentPhase === 'rest') {
+      handleNext();
     }
 
     return () => clearInterval(interval);
-  }, [isPlaying, timeRemaining, currentExerciseIndex, exercises, isCompleted]);
+  }, [isRunning, timeLeft, currentPhase, currentExerciseIndex, exercises]);
 
-  const handlePlayPause = useCallback(() => {
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+  const toggleTimer = () => {
+    setIsRunning(!isRunning);
+  };
 
-  const handleSkip = useCallback(() => {
+  const handleNext = () => {
     if (currentExerciseIndex < exercises.length - 1) {
       setCurrentExerciseIndex(prev => prev + 1);
-      setIsPlaying(false);
+      setCurrentPhase('workout');
+      setIsRunning(false);
+    } else {
+      setCurrentPhase('complete');
+      setIsRunning(false);
     }
-  }, [currentExerciseIndex, exercises.length]);
-
-  const handleRepeat = useCallback(() => {
-    setTimeRemaining(currentExercise.duration);
-    setIsPlaying(false);
-  }, [currentExercise?.duration]);
+  };
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -75,141 +65,179 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (isCompleted) {
+  // Complete screen
+  if (currentPhase === 'complete') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-sm mx-auto text-center">
-          <div className="w-20 h-20 mx-auto mb-8 rounded-full bg-success/10 flex items-center justify-center">
-            <CheckCircle className="w-12 h-12 text-success" />
-          </div>
-          
-          <h2 className="text-2xl font-semibold mb-2">Complete!</h2>
-          <p className="text-muted-foreground mb-12">Nice work on your micro-workout</p>
+      <div className="min-h-screen bg-black text-white font-mono flex items-center justify-center">
+        <div className="max-w-md mx-auto px-6 text-center">
+          <div className="text-6xl mb-8">🎉</div>
+          <h1 className="text-2xl font-bold tracking-wider mb-4">WORKOUT COMPLETE!</h1>
+          <p className="text-white/60 text-sm mb-12">Great job finishing your workout session</p>
           
           <div className="space-y-4">
-            <Button variant="primary" size="xl" onClick={onComplete} className="w-full">
-              Continue
-            </Button>
-            <Button variant="outline" onClick={onExit} className="w-full">
-              Back to Home
-            </Button>
+            <button
+              onClick={onComplete}
+              className="w-full py-3 bg-white text-black font-bold text-sm tracking-wider rounded-lg hover:bg-white/90 transition-colors"
+            >
+              CONTINUE
+            </button>
+            <button
+              onClick={onExit}
+              className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+            >
+              BACK TO HOME
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-sm mx-auto p-4">
-        {/* Clean header */}
-        <div className="flex items-center justify-between mb-6 pt-4">
-          <div>
-            <div className="text-sm text-muted-foreground">
-              {currentExerciseIndex + 1} of {totalExercises}
+  // Rest screen
+  if (currentPhase === 'rest') {
+    return (
+      <div className="min-h-screen bg-black text-white font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <button onClick={onExit} className="p-2 hover:bg-white/10 rounded transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center">
+              <div className="text-sm font-medium">{currentExerciseIndex + 1} / {exercises.length}</div>
+              <div className="text-xs text-white/60 uppercase tracking-wider">REST</div>
             </div>
-            <Progress value={overallProgress} className="w-24 h-1 mt-2" />
+            <div className="w-9 h-9"></div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onExit}>
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
 
-        {/* Exercise content */}
-        <div className="text-center mb-12">
-          {/* Exercise demo */}
-          <div className="exercise-demo">
-            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center">
-              <span className="text-2xl">💪</span>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold tracking-wider mb-8">TAKE A BREAK</h1>
+            <div className="text-6xl font-bold mb-8">{formatTime(timeLeft)}</div>
+            
+            <div className="text-sm text-white/60 mb-8">
+              Next: {exercises[currentExerciseIndex + 1]?.name || 'Finish'}
             </div>
+
+            <button
+              onClick={handleNext}
+              className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+            >
+              SKIP REST
+            </button>
           </div>
-          
-          {/* Exercise info */}
-          <h2 className="text-2xl font-semibold mb-3">{currentExercise.name}</h2>
-          <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-            {currentExercise.instructions}
-          </p>
-          
-          {/* Timer */}
-          <div className="mb-8">
-            <div className={cn(
-              "text-5xl font-semibold mb-2 transition-colors duration-300 tabular-nums",
-              timeRemaining <= 5 ? "text-primary animate-pulse" : "text-foreground"
-            )}>
-              {formatTime(timeRemaining)}
+        </div>
+      </div>
+    );
+  }
+
+  // Main workout screen
+  if (currentPhase === 'workout') {
+    const exercise = exercises[currentExerciseIndex];
+    const progress = ((currentExerciseIndex + 1) / exercises.length) * 100;
+
+    return (
+      <div className="min-h-screen bg-black text-white font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <button 
+              onClick={onExit}
+              className="p-2 hover:bg-white/10 rounded transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="text-center">
+              <div className="text-sm font-medium">
+                {currentExerciseIndex + 1} / {exercises.length}
+              </div>
+              <div className="text-xs text-white/60 uppercase tracking-wider">
+                {exercise.category}
+              </div>
             </div>
-            {currentExercise.reps && (
-              <div className="text-sm text-muted-foreground">
-                Target: {currentExercise.reps} reps
+
+            <button 
+              onClick={onSaveWorkout}
+              className="p-2 hover:bg-white/10 rounded transition-colors"
+            >
+              <Bookmark className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-white/20 h-1 rounded mb-8">
+            <div 
+              className="bg-white h-1 rounded transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+
+          {/* Exercise illustration */}
+          <div className="flex justify-center mb-8">
+            <ExerciseIllustration exerciseName={exercise.name} />
+          </div>
+
+          {/* Exercise info */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold tracking-wider mb-4">{exercise.name}</h1>
+            
+            <div className="text-sm text-white/80 mb-6 leading-relaxed">
+              {exercise.instructions}
+            </div>
+
+            {/* Form tips */}
+            <div className="text-left bg-white/5 rounded-lg p-4 mb-6">
+              <div className="text-xs font-bold text-white/70 mb-3 tracking-wider">FORM TIPS</div>
+              <ul className="space-y-2">
+                {exercise.formTips.map((tip, index) => (
+                  <li key={index} className="text-xs text-white/60 flex items-start gap-2">
+                    <span className="text-white/40 mt-1">•</span>
+                    <span>{tip}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Timer display */}
+            <div className="text-6xl font-bold mb-2">{formatTime(timeLeft)}</div>
+            
+            {exercise.reps && (
+              <div className="text-sm text-white/60 mb-6">
+                Target: {exercise.reps} reps
               </div>
             )}
           </div>
-        </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-6 mb-8">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRepeat}
-            disabled={isPlaying}
-            className="w-12 h-12"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          
-          <Button
-            variant="primary"
-            size="floating"
-            onClick={handlePlayPause}
-          >
-            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleSkip}
-            disabled={currentExerciseIndex >= exercises.length - 1}
-            className="w-12 h-12"
-          >
-            <SkipForward className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Save Workout Button */}
-        {onSaveWorkout && (
-          <div className="mb-8">
-            <Button
-              variant="outline"
-              onClick={onSaveWorkout}
-              className="w-full"
+          {/* Control buttons */}
+          <div className="flex gap-4 mb-8">
+            <button
+              onClick={() => setCurrentExerciseIndex(Math.max(0, currentExerciseIndex - 1))}
+              disabled={currentExerciseIndex === 0}
+              className="flex-1 py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold tracking-wider"
             >
-              <Bookmark className="w-4 h-4 mr-2" />
-              SAVE WORKOUT
-            </Button>
+              PREVIOUS
+            </button>
+            
+            <button
+              onClick={toggleTimer}
+              className="flex-1 py-3 bg-white text-black rounded-lg text-sm hover:bg-white/90 transition-colors font-bold tracking-wider flex items-center justify-center gap-2"
+            >
+              {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isRunning ? 'PAUSE' : 'START'}
+            </button>
+            
+            <button
+              onClick={handleNext}
+              className="flex-1 py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+            >
+              {currentExerciseIndex === exercises.length - 1 ? 'FINISH' : 'NEXT'}
+            </button>
           </div>
-        )}
-
-        {/* Next exercises */}
-        {exercises.slice(currentExerciseIndex + 1, currentExerciseIndex + 2).length > 0 && (
-          <div className="space-y-3">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider text-center">
-              Next
-            </div>
-            <div className="text-center p-3 bg-muted/30 rounded-lg">
-              <div className="font-medium text-sm">
-                {exercises[currentExerciseIndex + 1]?.name}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {formatTime(exercises[currentExerciseIndex + 1]?.duration || 0)}
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 };
 
 export default WorkoutTimer;

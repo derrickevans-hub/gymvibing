@@ -85,10 +85,16 @@ const Index = () => {
     localStorage.setItem('vibe-gyming-stats', JSON.stringify(updated));
   };
 
-  const generateWorkout = () => {
-    const newWorkout = WorkoutGenerator.generateWorkout(preferences);
-    setWorkout(newWorkout);
-    setCurrentView('workout');
+  const generateWorkout = async () => {
+    try {
+      const { ClaudeWorkoutGenerator } = await import('@/utils/claudeWorkoutGenerator');
+      const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(preferences);
+      setWorkout(newWorkout);
+      setCurrentView('workout');
+    } catch (error) {
+      console.error('Failed to generate workout:', error);
+      // You could show a toast notification here
+    }
   };
 
   const handleWorkoutComplete = () => {
@@ -166,11 +172,11 @@ const Index = () => {
     localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
     if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
     } else {
-      generateWorkout();
+      await generateWorkout();
     }
   };
 
@@ -549,7 +555,7 @@ const Index = () => {
           <h3 className="text-xs font-medium text-white/60 tracking-wider mb-6">QUICK OPTIONS</h3>
           
           <button
-            onClick={() => {
+            onClick={async () => {
               setPreferences({
                 ...preferences,
                 spaceSize: 'small',
@@ -559,7 +565,7 @@ const Index = () => {
                 focusArea: 'mobility',
                 notes: ''
               });
-              generateWorkout();
+              await generateWorkout();
             }}
             className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
           >
@@ -568,7 +574,7 @@ const Index = () => {
           </button>
           
           <button
-            onClick={() => {
+            onClick={async () => {
               setPreferences({
                 ...preferences,
                 spaceSize: 'big',
@@ -578,7 +584,7 @@ const Index = () => {
                 focusArea: 'cardio',
                 notes: ''
               });
-              generateWorkout();
+              await generateWorkout();
             }}
             className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
           >
@@ -587,7 +593,7 @@ const Index = () => {
           </button>
           
           <button
-            onClick={() => {
+            onClick={async () => {
               setPreferences({
                 ...preferences,
                 spaceSize: 'big',
@@ -597,7 +603,7 @@ const Index = () => {
                 focusArea: 'full-body',
                 notes: ''
               });
-              generateWorkout();
+              await generateWorkout();
             }}
             className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
           >

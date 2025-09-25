@@ -3,12 +3,16 @@ export interface Exercise {
   name: string;
   duration: number; // in seconds
   reps?: number;
-  difficulty: 1 | 2 | 3;
-  spaceRequirement: 'minimal' | 'normal' | 'large';
-  energyLevel: 'low' | 'medium' | 'high';
-  bodyFocus: 'upper' | 'lower' | 'core' | 'cardio' | 'flexibility';
-  equipment: 'none' | 'chair' | 'wall';
+  sets?: number;
+  difficulty?: 1 | 2 | 3;
+  spaceRequirement?: 'minimal' | 'normal' | 'large';
+  energyLevel?: 'low' | 'medium' | 'high';
+  bodyFocus?: 'upper' | 'lower' | 'core' | 'cardio' | 'flexibility';
+  equipment?: 'none' | 'chair' | 'wall';
   instructions: string;
+  formTips: string[];
+  category: 'warmup' | 'main' | 'cooldown';
+  restAfter?: number;
   animation?: string; // For future stick figure animations
 }
 
