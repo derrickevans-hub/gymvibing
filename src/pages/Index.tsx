@@ -373,7 +373,7 @@ interface SavedWorkout {
 }
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout' | 'saved'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workoutPlan' | 'workout' | 'saved'>('home');
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
@@ -431,7 +431,7 @@ const Index = () => {
       
       const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(aiRequest);
       setWorkout(newWorkout);
-      setCurrentView('workout');
+      setCurrentView('workoutPlan');
     } catch (error) {
       console.error('Failed to generate workout:', error);
     } finally {
@@ -505,7 +505,7 @@ const Index = () => {
     setSavedWorkouts(updatedSaved);
     localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
     
-    setCurrentView('workout');
+    setCurrentView('workoutPlan');
   };
 
   const deleteSavedWorkout = (workoutId: string) => {
@@ -529,6 +529,107 @@ const Index = () => {
       setCurrentView('home');
     }
   };
+
+  // Workout plan preview screen
+  if (currentView === 'workoutPlan' && workout) {
+    return (
+      <div className="min-h-screen bg-background text-foreground font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <button 
+              onClick={() => setCurrentView('home')}
+              className="p-2 hover:bg-muted rounded transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold tracking-wider">YOUR WORKOUT PLAN</h1>
+              <p className="text-muted-foreground text-sm">
+                {preferences.duration} min • {preferences.focusArea.replace('-', ' ')} • {preferences.intensity}
+              </p>
+            </div>
+          </div>
+
+          {/* Workout Summary */}
+          <div className="mb-6 p-4 border border-border rounded-lg bg-card">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-lg font-bold">{workout.exercises.length}</div>
+                <div className="text-xs text-muted-foreground tracking-wider">EXERCISES</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold">{Math.round(workout.totalDuration / 60)}</div>
+                <div className="text-xs text-muted-foreground tracking-wider">MINUTES</div>
+              </div>
+              <div>
+                <div className="text-lg font-bold">{workout.estimatedCalories}</div>
+                <div className="text-xs text-muted-foreground tracking-wider">CALORIES</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Exercise List */}
+          <div className="space-y-3 mb-8">
+            <h3 className="text-sm font-bold tracking-wider text-muted-foreground">EXERCISES</h3>
+            {workout.exercises.map((exercise, index) => (
+              <div key={exercise.id} className="p-4 border border-border rounded-lg bg-card">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-sm tracking-wide mb-1">{exercise.name}</h4>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      {exercise.duration ? `${exercise.duration}s` : `${exercise.sets} sets × ${exercise.reps} reps`}
+                      {exercise.restAfter && ` • ${exercise.restAfter}s rest`}
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {exercise.instructions}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <button
+              onClick={() => setCurrentView('workout')}
+              className="w-full py-4 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-3"
+            >
+              <Play className="w-5 h-5" />
+              START WORKOUT
+            </button>
+            
+            <button
+              onClick={generateWorkout}
+              disabled={isGenerating}
+              className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  GENERATING...
+                </>
+              ) : (
+                'TRY ANOTHER WORKOUT'
+              )}
+            </button>
+            
+            <button
+              onClick={saveCurrentWorkout}
+              className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card flex items-center justify-center gap-2"
+            >
+              <Bookmark className="w-4 h-4" />
+              SAVE WORKOUT
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (currentView === 'workout' && workout) {
     return (
