@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WorkoutPreferences, Workout, UserStats, FocusArea } from '@/types/exercise';
 import { WorkoutGenerator } from '@/utils/workoutGenerator';
 import WorkoutTimer from '@/components/WorkoutTimer';
@@ -25,7 +26,7 @@ interface EnhancedWorkoutPreferences extends WorkoutPreferences {
   spaceSize: 'small' | 'big';
   hasWeights: boolean;
   intensity: 'light' | 'moderate' | 'intense';
-  duration: 5 | 10 | 15 | 20 | 30;
+  duration: number;
   focusArea: 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
   notes: string;
 }
@@ -240,19 +241,28 @@ const Index = () => {
         title: "DURATION",
         subtitle: "How long can you workout?",
         icon: <Clock className="w-6 h-6" />,
-        options: [
-          { key: '5', label: '5 MIN', description: 'Quick burst' },
-          { key: '10', label: '10 MIN', description: 'Short session' },
-          { key: '15', label: '15 MIN', description: 'Standard workout' },
-          { key: '20', label: '20 MIN', description: 'Extended session' },
-          { key: '30', label: '30 MIN', description: 'Full workout' }
-        ],
         currentValue: preferences.duration.toString(),
         onChange: (value: string) => {
-          const duration = parseInt(value) as 5 | 10 | 15 | 20 | 30;
+          const duration = parseInt(value);
           const timeMinutes = duration <= 5 ? 5 : duration <= 10 ? 3 : 2;
           setPreferences(prev => ({ ...prev, duration, timeMinutes: timeMinutes as 2 | 3 | 5 }));
-        }
+        },
+        isSelect: true,
+        selectOptions: [
+          { value: '5', label: '5 minutes' },
+          { value: '10', label: '10 minutes' },
+          { value: '15', label: '15 minutes' },
+          { value: '20', label: '20 minutes' },
+          { value: '30', label: '30 minutes' },
+          { value: '45', label: '45 minutes' },
+          { value: '60', label: '1 hour' },
+          { value: '75', label: '1 hour 15 minutes' },
+          { value: '90', label: '1 hour 30 minutes' },
+          { value: '105', label: '1 hour 45 minutes' },
+          { value: '120', label: '2 hours' },
+          { value: '135', label: '2 hours 15 minutes' },
+          { value: '150', label: '2 hours 30 minutes' }
+        ]
       },
       // Question 5: Focus Area - Body Parts
       {
@@ -332,7 +342,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Options or Text Area */}
+          {/* Options, Select, or Text Area */}
           <div className="space-y-4 mb-12">
             {currentQuestion.isTextArea ? (
               <div>
@@ -345,6 +355,29 @@ const Index = () => {
                 />
                 <p className="text-xs text-white/50 mt-2">Leave blank if none apply</p>
               </div>
+            ) : currentQuestion.isSelect ? (
+              <Select
+                value={currentQuestion.currentValue as string}
+                onValueChange={(value) => {
+                  currentQuestion.onChange(value);
+                  setTimeout(nextQuestion, 150);
+                }}
+              >
+                <SelectTrigger className="w-full bg-black border-white/30 text-white focus:border-white/60 font-mono">
+                  <SelectValue placeholder="Select duration..." />
+                </SelectTrigger>
+                <SelectContent className="bg-black border-white/30 text-white font-mono">
+                  {currentQuestion.selectOptions?.map((option) => (
+                    <SelectItem 
+                      key={option.value} 
+                      value={option.value}
+                      className="text-white hover:bg-white/10 focus:bg-white/10"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : (
               currentQuestion.options?.map((option, index) => (
                 <button
