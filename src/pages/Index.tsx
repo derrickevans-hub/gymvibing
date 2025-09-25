@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { WorkoutPreferences, Workout, UserStats, FocusArea } from '@/types/exercise';
 import { WorkoutGenerator } from '@/utils/workoutGenerator';
 import WorkoutTimer from '@/components/WorkoutTimer';
@@ -14,7 +15,9 @@ import {
   Zap,
   Heart,
   Cpu,
-  Activity
+  Activity,
+  Bookmark,
+  X
 } from 'lucide-react';
 
 // Enhanced preferences type
@@ -24,12 +27,24 @@ interface EnhancedWorkoutPreferences extends WorkoutPreferences {
   intensity: 'light' | 'moderate' | 'intense';
   duration: 5 | 10 | 15 | 20 | 30;
   focusArea: 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
+  notes: string;
+}
+
+// Saved workout interface
+interface SavedWorkout {
+  id: string;
+  name: string;
+  workout: Workout;
+  preferences: EnhancedWorkoutPreferences;
+  savedAt: Date;
+  timesCompleted: number;
 }
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout' | 'saved'>('home');
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
+  const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({
     streak: 0,
     totalWorkouts: 0,
@@ -37,7 +52,7 @@ const Index = () => {
   });
 
   const [preferences, setPreferences] = useState<EnhancedWorkoutPreferences>({
-    timeMinutes: 15,
+    timeMinutes: 5,
     spaceType: 'normal',
     energyLevel: 'medium',
     equipment: 'none',
@@ -46,13 +61,19 @@ const Index = () => {
     intensity: 'moderate',
     duration: 15,
     focusArea: 'full-body',
+    notes: '',
   });
 
-  // Load user stats from localStorage
+  // Load user stats and saved workouts from localStorage
   useEffect(() => {
     const savedStats = localStorage.getItem('vibe-gyming-stats');
     if (savedStats) {
       setUserStats(JSON.parse(savedStats));
+    }
+    
+    const savedWorkoutsData = localStorage.getItem('vibe-gyming-saved');
+    if (savedWorkoutsData) {
+      setSavedWorkouts(JSON.parse(savedWorkoutsData));
     }
   }, []);
 
@@ -101,6 +122,49 @@ const Index = () => {
     setQuestionStep(0);
   };
 
+  // Save workout functions
+  const saveCurrentWorkout = () => {
+    if (!workout) return;
+    
+    const focusLabel = preferences.focusArea.replace('-', ' ').toUpperCase();
+    const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
+    
+    const savedWorkout: SavedWorkout = {
+      id: Date.now().toString(),
+      name: workoutName,
+      workout,
+      preferences,
+      savedAt: new Date(),
+      timesCompleted: 0,
+    };
+    
+    const updatedSaved = [...savedWorkouts, savedWorkout];
+    setSavedWorkouts(updatedSaved);
+    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
+  };
+
+  const loadSavedWorkout = (savedWorkout: SavedWorkout) => {
+    setWorkout(savedWorkout.workout);
+    setPreferences(savedWorkout.preferences);
+    
+    // Update times completed
+    const updatedSaved = savedWorkouts.map(sw => 
+      sw.id === savedWorkout.id 
+        ? { ...sw, timesCompleted: sw.timesCompleted + 1 }
+        : sw
+    );
+    setSavedWorkouts(updatedSaved);
+    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
+    
+    setCurrentView('workout');
+  };
+
+  const deleteSavedWorkout = (workoutId: string) => {
+    const updatedSaved = savedWorkouts.filter(sw => sw.id !== workoutId);
+    setSavedWorkouts(updatedSaved);
+    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
+  };
+
   const nextQuestion = () => {
     if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
@@ -127,6 +191,7 @@ const Index = () => {
           setWorkout(null);
           setQuestionStep(0);
         }}
+        onSaveWorkout={saveCurrentWorkout}
       />
     );
   }
@@ -145,18 +210,18 @@ const Index = () => {
         currentValue: preferences.spaceSize,
         onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
       },
-      // Question 2: Equipment
-      {
-        title: "EQUIPMENT",
-        subtitle: "What do you have available?",
-        icon: <Dumbbell className="w-6 h-6" />,
-        options: [
-          { key: false, label: 'NO WEIGHTS', description: 'Bodyweight only' },
-          { key: true, label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
-        ],
-        currentValue: preferences.hasWeights,
-        onChange: (value: boolean) => setPreferences(prev => ({ ...prev, hasWeights: value }))
-      },
+        // Question 2: Equipment
+        {
+          title: "EQUIPMENT",
+          subtitle: "What do you have available?",
+          icon: <Dumbbell className="w-6 h-6" />,
+          options: [
+            { key: 'false', label: 'NO WEIGHTS', description: 'Bodyweight only' },
+            { key: 'true', label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
+          ],
+          currentValue: preferences.hasWeights.toString(),
+          onChange: (value: string) => setPreferences(prev => ({ ...prev, hasWeights: value === 'true' }))
+        },
       // Question 3: Intensity
       {
         title: "INTENSITY",
@@ -176,14 +241,18 @@ const Index = () => {
         subtitle: "How long can you workout?",
         icon: <Clock className="w-6 h-6" />,
         options: [
-          { key: 5, label: '5 MIN', description: 'Quick burst' },
-          { key: 10, label: '10 MIN', description: 'Short session' },
-          { key: 15, label: '15 MIN', description: 'Standard workout' },
-          { key: 20, label: '20 MIN', description: 'Extended session' },
-          { key: 30, label: '30 MIN', description: 'Full workout' }
+          { key: '5', label: '5 MIN', description: 'Quick burst' },
+          { key: '10', label: '10 MIN', description: 'Short session' },
+          { key: '15', label: '15 MIN', description: 'Standard workout' },
+          { key: '20', label: '20 MIN', description: 'Extended session' },
+          { key: '30', label: '30 MIN', description: 'Full workout' }
         ],
-        currentValue: preferences.duration,
-        onChange: (value: number) => setPreferences(prev => ({ ...prev, duration: value as 5 | 10 | 15 | 20 | 30, timeMinutes: value as 2 | 3 | 5 }))
+        currentValue: preferences.duration.toString(),
+        onChange: (value: string) => {
+          const duration = parseInt(value) as 5 | 10 | 15 | 20 | 30;
+          const timeMinutes = duration <= 5 ? 5 : duration <= 10 ? 3 : 2;
+          setPreferences(prev => ({ ...prev, duration, timeMinutes: timeMinutes as 2 | 3 | 5 }));
+        }
       },
       // Question 5: Focus Area - Body Parts
       {
@@ -197,7 +266,7 @@ const Index = () => {
           { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility' }))
       },
       // Question 6: Workout Type
       {
@@ -210,11 +279,21 @@ const Index = () => {
           { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility' }))
+      },
+      // Question 7: Notes
+      {
+        title: "NOTES",
+        subtitle: "Any injuries or things to avoid?",
+        icon: <Heart className="w-6 h-6" />,
+        currentValue: preferences.notes,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, notes: value })),
+        isTextArea: true
       }
     ];
 
     const currentQuestion = questions[questionStep];
+    if (!currentQuestion) return null;
 
     return (
       <div className="min-h-screen bg-black text-white font-mono">
@@ -253,40 +332,124 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Options */}
+          {/* Options or Text Area */}
           <div className="space-y-4 mb-12">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  currentQuestion.onChange(option.key);
-                  setTimeout(nextQuestion, 150);
-                }}
-                className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
-                  currentQuestion.currentValue === option.key
-                    ? 'bg-white text-black border-white'
-                    : 'bg-black border-white/30 hover:border-white/60 hover:bg-white/5'
-                }`}
-              >
-                <div className="font-bold text-sm tracking-wider mb-1">
-                  {option.label}
-                </div>
-                <div className={`text-xs ${
-                  currentQuestion.currentValue === option.key ? 'text-black/70' : 'text-white/50'
-                }`}>
-                  {option.description}
-                </div>
-              </button>
-            ))}
+            {currentQuestion.isTextArea ? (
+              <div>
+                <Textarea
+                  value={currentQuestion.currentValue as string}
+                  onChange={(e) => currentQuestion.onChange(e.target.value)}
+                  placeholder="e.g. lower back pain, knee issues, avoid jumping..."
+                  rows={4}
+                  className="w-full bg-black border-white/30 text-white placeholder:text-white/50 focus:border-white/60 font-mono"
+                />
+                <p className="text-xs text-white/50 mt-2">Leave blank if none apply</p>
+              </div>
+            ) : (
+              currentQuestion.options?.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    currentQuestion.onChange(option.key);
+                    setTimeout(nextQuestion, 150);
+                  }}
+                  className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
+                    currentQuestion.currentValue === option.key
+                      ? 'bg-white text-black border-white'
+                      : 'bg-black border-white/30 hover:border-white/60 hover:bg-white/5'
+                  }`}
+                >
+                  <div className="font-bold text-sm tracking-wider mb-1">
+                    {option.label}
+                  </div>
+                  <div className={`text-xs ${
+                    currentQuestion.currentValue === option.key ? 'text-black/70' : 'text-white/50'
+                  }`}>
+                    {option.description}
+                  </div>
+                </button>
+              ))
+            )}
           </div>
 
-          {/* Skip button */}
+          {/* Action button */}
           <button
             onClick={nextQuestion}
-            className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors"
+            className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
           >
-            SKIP
+            {questionStep === questions.length - 1 ? 'GENERATE WORKOUT' : 'SKIP'}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Saved workouts screen
+  if (currentView === 'saved') {
+    return (
+      <div className="min-h-screen bg-black text-white font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <button 
+              onClick={() => setCurrentView('home')}
+              className="p-2 hover:bg-white/10 rounded transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold tracking-wider">SAVED WORKOUTS</h1>
+              <p className="text-white/60 text-sm">Your favorite routines</p>
+            </div>
+          </div>
+
+          {/* Empty state */}
+          {savedWorkouts.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 mx-auto mb-6 border border-white/30 rounded-lg flex items-center justify-center">
+                <Bookmark className="w-8 h-8 text-white/60" />
+              </div>
+              <h2 className="text-lg font-bold tracking-wider mb-2">NO SAVED WORKOUTS YET</h2>
+              <p className="text-white/60 text-sm mb-8">Save your favorite routines for quick access</p>
+              <button
+                onClick={() => setCurrentView('home')}
+                className="px-6 py-3 bg-white text-black font-bold text-sm tracking-wider rounded-lg hover:bg-white/90 transition-colors"
+              >
+                CREATE YOUR FIRST WORKOUT
+              </button>
+            </div>
+          ) : (
+            /* Saved workouts list */
+            <div className="space-y-4">
+              {savedWorkouts.map((savedWorkout) => (
+                <div key={savedWorkout.id} className="p-4 border border-white/20 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-sm tracking-wider mb-1">{savedWorkout.name}</h3>
+                      <div className="text-xs text-white/50">
+                        {savedWorkout.workout.exercises.length} exercises • {savedWorkout.preferences.duration} min
+                      </div>
+                      <div className="text-xs text-white/50">
+                        Completed {savedWorkout.timesCompleted} times
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => deleteSavedWorkout(savedWorkout.id)}
+                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => loadSavedWorkout(savedWorkout)}
+                    className="w-full py-2 bg-white text-black font-bold text-sm tracking-wider rounded hover:bg-white/90 transition-colors"
+                  >
+                    START WORKOUT
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -321,6 +484,22 @@ const Index = () => {
           </div>
         </div>
 
+        {/* Saved Workouts */}
+        <div className="mb-16">
+          <button
+            onClick={() => setCurrentView('saved')}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Bookmark className="w-5 h-5" />
+              <div className="flex-1">
+                <div className="font-bold text-sm tracking-wide mb-1">SAVED WORKOUTS</div>
+                <div className="text-xs text-white/50">{savedWorkouts.length} routines saved</div>
+              </div>
+            </div>
+          </button>
+        </div>
+
         {/* Main CTA */}
         <div className="mb-16">
           <button
@@ -344,7 +523,8 @@ const Index = () => {
                 hasWeights: false,
                 intensity: 'light',
                 duration: 5,
-                focusArea: 'mobility'
+                focusArea: 'mobility',
+                notes: ''
               });
               generateWorkout();
             }}
@@ -362,7 +542,8 @@ const Index = () => {
                 hasWeights: false,
                 intensity: 'intense',
                 duration: 10,
-                focusArea: 'cardio'
+                focusArea: 'cardio',
+                notes: ''
               });
               generateWorkout();
             }}
@@ -380,7 +561,8 @@ const Index = () => {
                 hasWeights: true,
                 intensity: 'moderate',
                 duration: 20,
-                focusArea: 'full-body'
+                focusArea: 'full-body',
+                notes: ''
               });
               generateWorkout();
             }}

@@ -2,16 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Exercise } from '@/types/exercise';
 import { Button } from '@/components/ui/button-minimal';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, SkipForward, RotateCcw, CheckCircle, X } from 'lucide-react';
+import { Play, Pause, SkipForward, RotateCcw, CheckCircle, X, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkoutTimerProps {
   exercises: Exercise[];
   onComplete: () => void;
   onExit: () => void;
+  onSaveWorkout?: () => void;
 }
 
-const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onExit }) => {
+const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onExit, onSaveWorkout }) => {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(exercises[0]?.duration || 0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -175,6 +176,20 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
             <SkipForward className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* Save Workout Button */}
+        {onSaveWorkout && (
+          <div className="mb-8">
+            <Button
+              variant="outline"
+              onClick={onSaveWorkout}
+              className="w-full"
+            >
+              <Bookmark className="w-4 h-4 mr-2" />
+              SAVE WORKOUT
+            </Button>
+          </div>
+        )}
 
         {/* Next exercises */}
         {exercises.slice(currentExerciseIndex + 1, currentExerciseIndex + 2).length > 0 && (
