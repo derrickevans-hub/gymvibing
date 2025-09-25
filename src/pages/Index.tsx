@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
+import { supabase } from '@/integrations/supabase/client';
 import WorkoutTimer from '@/components/WorkoutTimer';
 import { 
   Play,
@@ -52,11 +53,9 @@ interface AIWorkoutResponse {
 class ClaudeWorkoutGenerator {
   private static async callClaude(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
     // Check if we have the API key
-    const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      console.warn('No Anthropic API key found, using fallback workout');
-      return this.getFallbackWorkout(preferences);
-    }
+    // Use the Supabase edge function instead of trying to access process.env
+    // This method is no longer needed since we use the edge function
+    throw new Error('Use edge function instead');
 
     const notesSection = preferences.notes.trim() 
       ? `\n- Special considerations/injuries to avoid: ${preferences.notes}` 
@@ -104,7 +103,7 @@ Requirements:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+          'x-api-key': 'not-used',
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
@@ -324,31 +323,51 @@ Requirements:
   }
 
   static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
-    const aiWorkout = await this.callClaude(preferences);
-    
-    // Convert AI response to your app's Workout format
-    return {
-      id: `workout-${Date.now()}`,
-      exercises: aiWorkout.exercises.map((exercise, index) => ({
-        id: `exercise-${index + 1}`,
-        name: exercise.name,
-        duration: exercise.duration,
-        reps: parseInt(exercise.reps) || undefined,
-        sets: exercise.sets,
-        instructions: exercise.instructions.join(' '),
-        formTips: ['Maintain proper form', 'Control the movement', 'Focus on quality over quantity'],
-        category: 'main' as const,
-        restAfter: exercise.restTime
-      })),
-      totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
-      estimatedCalories: Math.round(aiWorkout.totalDuration * 8), // Rough estimate
-      preferences: {
-        timeMinutes: preferences.duration as 2 | 3 | 5,
-        spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
-        energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'moderate' ? 'medium' : 'high',
-        equipment: preferences.hasWeights ? 'chair' : 'none'
+    try {
+      // Call the Supabase edge function
+      const { data, error } = await supabase.functions.invoke('generate-workout', {
+        body: {
+          spaceSize: preferences.spaceSize,
+          hasWeights: preferences.hasWeights,
+          intensity: preferences.intensity,
+          duration: preferences.duration,
+          focusArea: preferences.focusArea,
+          notes: preferences.notes
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error('Failed to generate workout');
       }
-    };
+
+      // Convert the response to our Workout format
+      return {
+        id: `workout-${Date.now()}`,
+        exercises: data.exercises.map((exercise: any, index: number) => ({
+          id: exercise.id || `exercise-${index + 1}`,
+          name: exercise.name,
+          duration: exercise.duration,
+          reps: exercise.reps,
+          sets: exercise.sets,
+          instructions: exercise.instructions,
+          formTips: exercise.formTips || ['Maintain proper form', 'Control the movement', 'Focus on quality over quantity'],
+          category: exercise.category || 'main',
+          restAfter: exercise.restAfter || 30
+        })),
+        totalDuration: data.totalDuration,
+        estimatedCalories: data.estimatedCalories || Math.round(preferences.duration * 8),
+        preferences: {
+          timeMinutes: preferences.duration as 2 | 3 | 5,
+          spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
+          energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'moderate' ? 'medium' : 'high',
+          equipment: preferences.hasWeights ? 'chair' : 'none'
+        }
+      };
+    } catch (error) {
+      console.error('Failed to generate workout:', error);
+      throw error;
+    }
   }
 }
 
