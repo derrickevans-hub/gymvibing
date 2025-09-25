@@ -11,7 +11,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'Slowly roll your neck in circles, 5 times each direction'
+    instructions: 'Slowly roll your neck in circles, 5 times each direction',
+    formTips: ['Move slowly and controlled', 'Don\'t force the movement', 'Stop if you feel dizzy'],
+    category: 'warmup'
   },
   {
     id: 'shoulder-shrugs',
@@ -22,7 +24,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'Lift shoulders to ears, hold 2 seconds, release. Repeat 10 times'
+    instructions: 'Lift shoulders to ears, hold 2 seconds, release. Repeat 10 times',
+    formTips: ['Keep arms relaxed', 'Hold briefly at the top', 'Release tension completely'],
+    category: 'warmup'
   },
   {
     id: 'seated-spinal-twist',
@@ -33,7 +37,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'chair',
-    instructions: 'Sit tall, twist gently to each side, hold 15 seconds'
+    instructions: 'Sit tall, twist gently to each side, hold 15 seconds',
+    formTips: ['Keep feet flat on floor', 'Elongate spine before twisting', 'Breathe deeply'],
+    category: 'warmup'
   },
   
   // Bodyweight Strength
@@ -47,7 +53,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'medium',
     bodyFocus: 'upper',
     equipment: 'none',
-    instructions: 'Standard or modified push-ups, maintain straight line'
+    instructions: 'Standard or modified push-ups, maintain straight line',
+    formTips: ['Keep core engaged', 'Maintain straight line from head to heels', 'Lower chest to ground', 'Push through palms'],
+    category: 'main'
   },
   {
     id: 'wall-push-ups',
@@ -59,7 +67,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'upper',
     equipment: 'wall',
-    instructions: 'Stand arms length from wall, push against wall'
+    instructions: 'Stand arms length from wall, push against wall',
+    formTips: ['Keep body straight', 'Place hands at shoulder height', 'Control the movement'],
+    category: 'main'
   },
   {
     id: 'squats',
@@ -71,7 +81,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'medium',
     bodyFocus: 'lower',
     equipment: 'none',
-    instructions: 'Feet shoulder-width apart, lower down like sitting in chair'
+    instructions: 'Feet shoulder-width apart, lower down like sitting in chair',
+    formTips: ['Keep knees behind toes', 'Lower until thighs parallel', 'Keep chest up', 'Drive through heels'],
+    category: 'main'
   },
   {
     id: 'chair-squats',
@@ -83,7 +95,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'lower',
     equipment: 'chair',
-    instructions: 'Stand up and sit down from chair without using hands'
+    instructions: 'Stand up and sit down from chair without using hands',
+    formTips: ['Use only leg muscles', 'Lean slightly forward when standing', 'Control the descent'],
+    category: 'main'
   },
   {
     id: 'lunges',
@@ -95,7 +109,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'medium',
     bodyFocus: 'lower',
     equipment: 'none',
-    instructions: 'Step forward, lower back knee toward ground, alternate legs'
+    instructions: 'Step forward, lower back knee toward ground, alternate legs',
+    formTips: ['Keep front knee over ankle', 'Lower back knee toward ground', 'Keep torso upright', 'Push off front foot'],
+    category: 'main'
   },
 
   // Cardio Bursts
@@ -109,7 +125,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'high',
     bodyFocus: 'cardio',
     equipment: 'none',
-    instructions: 'Jump feet apart while raising arms overhead, repeat quickly'
+    instructions: 'Jump feet apart while raising arms overhead, repeat quickly',
+    formTips: ['Land softly on balls of feet', 'Keep arms straight', 'Maintain rhythm', 'Engage core'],
+    category: 'main'
   },
   {
     id: 'high-knees',
@@ -120,7 +138,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'high',
     bodyFocus: 'cardio',
     equipment: 'none',
-    instructions: 'March in place, bringing knees up to waist level'
+    instructions: 'March in place, bringing knees up to waist level',
+    formTips: ['Lift knees high', 'Stay on balls of feet', 'Pump arms naturally', 'Keep core tight'],
+    category: 'main'
   },
   {
     id: 'mountain-climbers',
@@ -131,7 +151,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'high',
     bodyFocus: 'cardio',
     equipment: 'none',
-    instructions: 'Plank position, alternate bringing knees to chest quickly'
+    instructions: 'Plank position, alternate bringing knees to chest quickly',
+    formTips: ['Maintain plank position', 'Keep hips level', 'Drive knees toward chest', 'Keep hands planted'],
+    category: 'main'
   },
   {
     id: 'step-ups',
@@ -143,7 +165,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'medium',
     bodyFocus: 'cardio',
     equipment: 'chair',
-    instructions: 'Step up onto chair, alternate legs, control the movement'
+    instructions: 'Step up onto chair, alternate legs, control the movement',
+    formTips: ['Use entire foot on chair', 'Step down with control', 'Keep chest up', 'Ensure chair stability'],
+    category: 'main'
   },
 
   // Core Exercises
@@ -156,7 +180,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'medium',
     bodyFocus: 'core',
     equipment: 'none',
-    instructions: 'Hold straight line from head to heels, engage core'
+    instructions: 'Hold straight line from head to heels, engage core',
+    formTips: ['Keep body in straight line', 'Engage core muscles', 'Don\'t let hips sag', 'Breathe normally'],
+    category: 'main'
   },
   {
     id: 'dead-bug',
@@ -168,7 +194,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'core',
     equipment: 'none',
-    instructions: 'Lie on back, extend opposite arm and leg, alternate slowly'
+    instructions: 'Lie on back, extend opposite arm and leg, alternate slowly',
+    formTips: ['Keep lower back pressed to floor', 'Move slowly and controlled', 'Extend fully', 'Maintain core tension'],
+    category: 'main'
   },
   {
     id: 'seated-leg-lifts',
@@ -180,7 +208,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'core',
     equipment: 'chair',
-    instructions: 'Sit tall, lift one knee at a time, hold briefly'
+    instructions: 'Sit tall, lift one knee at a time, hold briefly',
+    formTips: ['Sit up straight', 'Lift knee toward chest', 'Hold briefly', 'Control the movement'],
+    category: 'main'
   },
 
   // Flexibility
@@ -193,7 +223,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'Stand, slowly fold forward, let arms hang, gentle stretch'
+    instructions: 'Stand, slowly fold forward, let arms hang, gentle stretch',
+    formTips: ['Bend from hips not waist', 'Let gravity help', 'Don\'t bounce', 'Breathe deeply'],
+    category: 'cooldown'
   },
   {
     id: 'cat-cow',
@@ -204,7 +236,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'On hands and knees, arch and round spine slowly'
+    instructions: 'On hands and knees, arch and round spine slowly',
+    formTips: ['Move slowly between positions', 'Round spine like a cat', 'Arch like a cow', 'Breathe with movement'],
+    category: 'cooldown'
   },
   {
     id: 'hip-circles',
@@ -215,7 +249,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'Hands on hips, make large circles with your hips'
+    instructions: 'Hands on hips, make large circles with your hips',
+    formTips: ['Make full circles', 'Keep feet planted', 'Go both directions', 'Keep movement smooth'],
+    category: 'warmup'
   },
 
   // Additional exercises for variety
@@ -229,7 +265,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'lower',
     equipment: 'none',
-    instructions: 'Rise up on toes, hold briefly, lower slowly'
+    instructions: 'Rise up on toes, hold briefly, lower slowly',
+    formTips: ['Rise high on toes', 'Hold at the top', 'Lower with control', 'Keep balance'],
+    category: 'main'
   },
   {
     id: 'arm-circles',
@@ -240,7 +278,9 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'flexibility',
     equipment: 'none',
-    instructions: 'Extend arms, make small to large circles, both directions'
+    instructions: 'Extend arms, make small to large circles, both directions',
+    formTips: ['Keep arms straight', 'Start small then larger', 'Go both directions', 'Keep shoulders relaxed'],
+    category: 'warmup'
   },
   {
     id: 'desk-push-ups',
@@ -252,6 +292,8 @@ export const exerciseDatabase: Exercise[] = [
     energyLevel: 'low',
     bodyFocus: 'upper',
     equipment: 'chair',
-    instructions: 'Hands on desk edge, push-up at an angle'
+    instructions: 'Hands on desk edge, push-up at an angle',
+    formTips: ['Keep body straight', 'Hands shoulder-width apart', 'Push through palms', 'Control the movement'],
+    category: 'main'
   }
 ];
