@@ -362,48 +362,38 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground mt-2">Leave blank if none apply</p>
               </div>
             ) : currentQuestion.isSelect ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
-                  {['5','10','15','20','30'].map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => {
-                        currentQuestion.onChange(val);
-                        setTimeout(nextQuestion, 150);
-                      }}
-                      className={`py-2 rounded-lg border text-sm font-medium transition-colors ${
-                        currentQuestion.currentValue === val
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-card text-foreground border-border hover:bg-muted'
-                      }`}
-                    >
-                      {val} min
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-muted-foreground">More durations</div>
-                <Select
-                  value={currentQuestion.currentValue as string}
-                  onValueChange={(value) => {
-                    currentQuestion.onChange(value);
-                    setTimeout(nextQuestion, 150);
-                  }}
-                >
-                  <SelectTrigger className="w-full bg-card border-border text-foreground focus:border-primary font-mono">
-                    <SelectValue placeholder="Select duration..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border text-popover-foreground font-mono z-50">
-                    {currentQuestion.selectOptions?.map((option) => (
-                      <SelectItem 
-                        key={option.value} 
-                        value={option.value}
-                        className="text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: '5', label: '5 min' },
+                  { value: '10', label: '10 min' },
+                  { value: '15', label: '15 min' },
+                  { value: '20', label: '20 min' },
+                  { value: '25', label: '25 min' },
+                  { value: '30', label: '30 min' },
+                  { value: '45', label: '45 min' },
+                  { value: '60', label: '1 hr' },
+                  { value: '75', label: '1h 15m' },
+                  { value: '90', label: '1h 30m' },
+                  { value: '105', label: '1h 45m' },
+                  { value: '120', label: '2 hrs' },
+                  { value: '135', label: '2h 15m' },
+                  { value: '150', label: '2h 30m' }
+                ].map((duration) => (
+                  <button
+                    key={duration.value}
+                    onClick={() => {
+                      currentQuestion.onChange(duration.value);
+                      setTimeout(nextQuestion, 150);
+                    }}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                      currentQuestion.currentValue === duration.value
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-card text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {duration.label}
+                  </button>
+                ))}
               </div>
             ) : (
               currentQuestion.options?.map((option, index) => (
