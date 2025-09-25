@@ -1,383 +1,410 @@
-# Lovable Integration Prompt: Claude API + Workout Saving
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button-minimal';
+import { Card } from '@/components/ui/card';
+import { WorkoutPreferences, Workout, UserStats, FocusArea } from '@/types/exercise';
+import { WorkoutGenerator } from '@/utils/workoutGenerator';
+import WorkoutTimer from '@/components/WorkoutTimer';
+import { 
+  Play,
+  ArrowLeft,
+  Clock,
+  MapPin,
+  Dumbbell,
+  Target,
+  Zap,
+  Heart,
+  Cpu,
+  Activity
+} from 'lucide-react';
 
-## 1. Claude API Integration
-
-**Add Anthropic Claude API integration to generate personalized workouts:**
-
-### Install Dependencies:
-```bash
-npm install @anthropic-ai/sdk
-```
-
-### Environment Variables:
-Add to your environment configuration:
-```
-REACT_APP_ANTHROPIC_API_KEY=your_anthropic_api_key_here
-```
-
-### Create AI Service File (`src/services/aiService.ts`):
-```typescript
-import Anthropic from '@anthropic-ai/sdk';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.REACT_APP_ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true // Only for client-side usage
-});
-
-export interface AIWorkoutRequest {
+// Enhanced preferences type
+interface EnhancedWorkoutPreferences extends WorkoutPreferences {
   spaceSize: 'small' | 'big';
   hasWeights: boolean;
   intensity: 'light' | 'moderate' | 'intense';
-  duration: number;
-  focusArea: string;
-  notes: string; // Add this for injuries/considerations
+  duration: 5 | 10 | 15 | 20 | 30;
+  focusArea: 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
 }
 
-export interface AIExercise {
-  name: string;
-  sets: number;
-  reps: string;
-  duration: number;
-  instructions: string[];
-  restTime: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  muscleGroups: string[];
-}
+const Index = () => {
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout'>('home');
+  const [questionStep, setQuestionStep] = useState(0);
+  const [workout, setWorkout] = useState<Workout | null>(null);
+  const [userStats, setUserStats] = useState<UserStats>({
+    streak: 0,
+    totalWorkouts: 0,
+    totalMinutes: 0,
+  });
 
-export interface AIWorkoutResponse {
-  title: string;
-  totalDuration: number;
-  exercises: AIExercise[];
-  warmupAdvice: string;
-  cooldownAdvice: string;
-}
+  const [preferences, setPreferences] = useState<EnhancedWorkoutPreferences>({
+    timeMinutes: 15,
+    spaceType: 'normal',
+    energyLevel: 'medium',
+    equipment: 'none',
+    spaceSize: 'big',
+    hasWeights: false,
+    intensity: 'moderate',
+    duration: 15,
+    focusArea: 'full-body',
+  });
 
-export const generateWorkoutWithAI = async (preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> => {
-  const notesSection = preferences.notes.trim() 
-    ? `\n- Special considerations/injuries to avoid: ${preferences.notes}` 
-    : '';
-    
-  const prompt = `Create a ${preferences.duration}-minute ${preferences.intensity} intensity workout for someone with:
-- Space: ${preferences.spaceSize} space
-- Equipment: ${preferences.hasWeights ? 'has weights/dumbbells' : 'no equipment (bodyweight only)'}
-- Focus: ${preferences.focusArea}${notesSection}
-
-Requirements:
-- Return ONLY valid JSON, no markdown or explanations
-- Include 4-8 exercises depending on duration
-- Each exercise should have: name, sets, reps (or time), instructions (3-4 bullet points), restTime, difficulty, muscleGroups
-- Include warmup and cooldown advice
-- Make instructions clear and beginner-friendly
-- If notes mention injuries/limitations, modify exercises accordingly and avoid movements that could aggravate those areas
-- Use this exact JSON structure:
-
-{
-  "title": "Workout Name",
-  "totalDuration": ${preferences.duration},
-  "exercises": [
-    {
-      "name": "Exercise Name",
-      "sets": 3,
-      "reps": "10-12" or "30 seconds",
-      "duration": 60,
-      "instructions": [
-        "Step 1 instruction",
-        "Step 2 instruction", 
-        "Step 3 instruction"
-      ],
-      "restTime": 30,
-      "difficulty": "beginner",
-      "muscleGroups": ["chest", "arms"]
+  // Load user stats from localStorage
+  useEffect(() => {
+    const savedStats = localStorage.getItem('vibe-gyming-stats');
+    if (savedStats) {
+      setUserStats(JSON.parse(savedStats));
     }
-  ],
-  "warmupAdvice": "Light movement for 2-3 minutes",
-  "cooldownAdvice": "Gentle stretching for 2-3 minutes"
-}`;
+  }, []);
 
-  try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-sonnet-20240229',
-      max_tokens: 2000,
-      messages: [{ 
-        role: 'user', 
-        content: prompt 
-      }]
-    });
-
-    const content = response.content[0].text;
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('AI Generation Error:', error);
-    // Fallback workout if API fails
-    return {
-      title: `${preferences.focusArea} Workout`,
-      totalDuration: preferences.duration,
-      exercises: [
-        {
-          name: "Push-ups",
-          sets: 3,
-          reps: "8-12",
-          duration: 60,
-          instructions: [
-            "Start in plank position with hands under shoulders",
-            "Lower body until chest nearly touches ground",
-            "Push back up to starting position"
-          ],
-          restTime: 30,
-          difficulty: "beginner",
-          muscleGroups: ["chest", "arms", "core"]
-        }
-      ],
-      warmupAdvice: "Do light arm circles and body movements for 2-3 minutes",
-      cooldownAdvice: "Stretch major muscle groups for 2-3 minutes"
-    };
-  }
-};
-```
-
-## 2. Update Types File (`src/types/exercise.ts`):
-
-Add these interfaces:
-```typescript
-export interface SavedWorkout {
-  id: string;
-  name: string;
-  workout: AIWorkoutResponse;
-  preferences: AIWorkoutRequest;
-  savedAt: Date;
-  timesCompleted: number;
-}
-
-// Update existing Workout interface to match AI response
-export interface Workout extends AIWorkoutResponse {}
-```
-
-## 3. Enhanced Main Component Updates:
-
-Replace the workout generation logic in your main component with:
-
-```typescript
-// Add these imports
-import { generateWorkoutWithAI, AIWorkoutResponse } from '@/services/aiService';
-import type { SavedWorkout } from '@/types/exercise';
-
-// Add to state
-const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
-const [isGenerating, setIsGenerating] = useState(false);
-const [showSavedWorkouts, setShowSavedWorkouts] = useState(false);
-
-// Update generateWorkout function
-const generateWorkout = async () => {
-  setIsGenerating(true);
-  try {
-    const aiRequest = {
-      spaceSize: preferences.spaceSize,
-      hasWeights: preferences.hasWeights,
-      intensity: preferences.intensity,
-      duration: preferences.duration,
-      focusArea: preferences.focusArea,
-      notes: preferences.notes,
-    };
-    
-    const aiWorkout = await generateWorkoutWithAI(aiRequest);
-    setWorkout(aiWorkout);
-    setCurrentView('workout');
-  } catch (error) {
-    console.error('Failed to generate workout:', error);
-    // Could show error message to user here
-  } finally {
-    setIsGenerating(false);
-  }
-};
-
-// Add save workout function
-const saveCurrentWorkout = () => {
-  if (!workout) return;
-  
-  const savedWorkout: SavedWorkout = {
-    id: Date.now().toString(),
-    name: workout.title || `${preferences.focusArea} - ${preferences.duration}min`,
-    workout: workout,
-    preferences: {
-      spaceSize: preferences.spaceSize,
-      hasWeights: preferences.hasWeights,
-      intensity: preferences.intensity,
-      duration: preferences.duration,
-      focusArea: preferences.focusArea,
-    },
-    savedAt: new Date(),
-    timesCompleted: 0
+  // Save user stats to localStorage
+  const updateStats = (newStats: Partial<UserStats>) => {
+    const updated = { ...userStats, ...newStats };
+    setUserStats(updated);
+    localStorage.setItem('vibe-gyming-stats', JSON.stringify(updated));
   };
-  
-  const updated = [...savedWorkouts, savedWorkout];
-  setSavedWorkouts(updated);
-  localStorage.setItem('vibe-gyming-saved', JSON.stringify(updated));
-};
 
-// Load saved workouts
-useEffect(() => {
-  const saved = localStorage.getItem('vibe-gyming-saved');
-  if (saved) {
-    setSavedWorkouts(JSON.parse(saved));
+  const generateWorkout = () => {
+    const newWorkout = WorkoutGenerator.generateWorkout(preferences);
+    setWorkout(newWorkout);
+    setCurrentView('workout');
+  };
+
+  const handleWorkoutComplete = () => {
+    if (workout) {
+      const today = new Date().toDateString();
+      const lastWorkout = userStats.lastWorkoutDate ? new Date(userStats.lastWorkoutDate).toDateString() : null;
+      
+      let newStreak = userStats.streak;
+      if (lastWorkout === today) {
+        // Already worked out today
+      } else if (lastWorkout === new Date(Date.now() - 86400000).toDateString()) {
+        newStreak = userStats.streak + 1;
+      } else {
+        newStreak = 1;
+      }
+
+      updateStats({
+        streak: newStreak,
+        totalWorkouts: userStats.totalWorkouts + 1,
+        totalMinutes: userStats.totalMinutes + preferences.duration,
+        lastWorkoutDate: new Date(),
+      });
+    }
+    
+    setCurrentView('home');
+    setWorkout(null);
+    setQuestionStep(0);
+  };
+
+  const startQuestionnaire = () => {
+    setCurrentView('questionnaire');
+    setQuestionStep(0);
+  };
+
+  const nextQuestion = () => {
+    if (questionStep < 6) {
+      setQuestionStep(questionStep + 1);
+    } else {
+      generateWorkout();
+    }
+  };
+
+  const prevQuestion = () => {
+    if (questionStep > 0) {
+      setQuestionStep(questionStep - 1);
+    } else {
+      setCurrentView('home');
+    }
+  };
+
+  if (currentView === 'workout' && workout) {
+    return (
+      <WorkoutTimer
+        exercises={workout.exercises}
+        onComplete={handleWorkoutComplete}
+        onExit={() => {
+          setCurrentView('home');
+          setWorkout(null);
+          setQuestionStep(0);
+        }}
+      />
+    );
   }
-}, []);
 
-// Function to load a saved workout
-const loadSavedWorkout = (savedWorkout: SavedWorkout) => {
-  setWorkout(savedWorkout.workout);
-  setPreferences(savedWorkout.preferences);
-  setCurrentView('workout');
-  
-  // Update completion count
-  const updated = savedWorkouts.map(sw => 
-    sw.id === savedWorkout.id 
-      ? { ...sw, timesCompleted: sw.timesCompleted + 1 }
-      : sw
-  );
-  setSavedWorkouts(updated);
-  localStorage.setItem('vibe-gyming-saved', JSON.stringify(updated));
-};
+  if (currentView === 'questionnaire') {
+    const questions = [
+      // Question 1: Space Size
+      {
+        title: "SPACE SIZE",
+        subtitle: "How much room do you have?",
+        icon: <MapPin className="w-6 h-6" />,
+        options: [
+          { key: 'small', label: 'SMALL SPACE', description: 'Apartment, office, hotel room' },
+          { key: 'big', label: 'BIG SPACE', description: 'Gym, yard, large room' }
+        ],
+        currentValue: preferences.spaceSize,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
+      },
+      // Question 2: Equipment
+      {
+        title: "EQUIPMENT",
+        subtitle: "What do you have available?",
+        icon: <Dumbbell className="w-6 h-6" />,
+        options: [
+          { key: false, label: 'NO WEIGHTS', description: 'Bodyweight only' },
+          { key: true, label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
+        ],
+        currentValue: preferences.hasWeights,
+        onChange: (value: boolean) => setPreferences(prev => ({ ...prev, hasWeights: value }))
+      },
+      // Question 3: Intensity
+      {
+        title: "INTENSITY",
+        subtitle: "How hard do you want to push?",
+        icon: <Zap className="w-6 h-6" />,
+        options: [
+          { key: 'light', label: 'LIGHT', description: 'Easy movement, recovery' },
+          { key: 'moderate', label: 'MODERATE', description: 'Steady effort' },
+          { key: 'intense', label: 'INTENSE', description: 'High energy, challenging' }
+        ],
+        currentValue: preferences.intensity,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, intensity: value as 'light' | 'moderate' | 'intense' }))
+      },
+      // Question 4: Duration
+      {
+        title: "DURATION",
+        subtitle: "How long can you workout?",
+        icon: <Clock className="w-6 h-6" />,
+        options: [
+          { key: 5, label: '5 MIN', description: 'Quick burst' },
+          { key: 10, label: '10 MIN', description: 'Short session' },
+          { key: 15, label: '15 MIN', description: 'Standard workout' },
+          { key: 20, label: '20 MIN', description: 'Extended session' },
+          { key: 30, label: '30 MIN', description: 'Full workout' }
+        ],
+        currentValue: preferences.duration,
+        onChange: (value: number) => setPreferences(prev => ({ ...prev, duration: value as 5 | 10 | 15 | 20 | 30, timeMinutes: value as 2 | 3 | 5 }))
+      },
+      // Question 5: Focus Area - Body Parts
+      {
+        title: "FOCUS AREA",
+        subtitle: "What do you want to target?",
+        icon: <Target className="w-6 h-6" />,
+        options: [
+          { key: 'upper-body', label: 'UPPER BODY', description: 'Arms, chest, shoulders, back' },
+          { key: 'lower-body', label: 'LOWER BODY', description: 'Legs, glutes, calves' },
+          { key: 'core', label: 'CORE', description: 'Abs, obliques, lower back' },
+          { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
+        ],
+        currentValue: preferences.focusArea,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+      },
+      // Question 6: Workout Type
+      {
+        title: "WORKOUT TYPE",
+        subtitle: "What style of training?",
+        icon: <Activity className="w-6 h-6" />,
+        options: [
+          { key: 'cardio', label: 'CARDIO', description: 'Heart rate, endurance' },
+          { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
+          { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
+        ],
+        currentValue: preferences.focusArea,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+      }
+    ];
 
-// Function to delete saved workout
-const deleteSavedWorkout = (workoutId: string) => {
-  const updated = savedWorkouts.filter(sw => sw.id !== workoutId);
-  setSavedWorkouts(updated);
-  localStorage.setItem('vibe-gyming-saved', JSON.stringify(updated));
-};
-```
+    const currentQuestion = questions[questionStep];
 
-## 4. Add Saved Workouts View:
+    return (
+      <div className="min-h-screen bg-black text-white font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          {/* Progress bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={prevQuestion}
+                className="p-2 hover:bg-white/10 rounded transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="text-sm font-medium">
+                {questionStep + 1} / {questions.length}
+              </div>
+            </div>
+            <div className="w-full bg-white/20 h-1 rounded">
+              <div 
+                className="bg-white h-1 rounded transition-all duration-300"
+                style={{ width: `${((questionStep + 1) / questions.length) * 100}%` }}
+              />
+            </div>
+          </div>
 
-Add this view to your component's render logic:
+          {/* Question */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 border border-white/30 rounded-lg flex items-center justify-center">
+                {currentQuestion.icon}
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-wider">{currentQuestion.title}</h1>
+                <p className="text-white/70 text-sm">{currentQuestion.subtitle}</p>
+              </div>
+            </div>
+          </div>
 
-```typescript
-// Add this view after the questionnaire view
-if (currentView === 'saved') {
+          {/* Options */}
+          <div className="space-y-4 mb-12">
+            {currentQuestion.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  currentQuestion.onChange(option.key);
+                  setTimeout(nextQuestion, 150);
+                }}
+                className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
+                  currentQuestion.currentValue === option.key
+                    ? 'bg-white text-black border-white'
+                    : 'bg-black border-white/30 hover:border-white/60 hover:bg-white/5'
+                }`}
+              >
+                <div className="font-bold text-sm tracking-wider mb-1">
+                  {option.label}
+                </div>
+                <div className={`text-xs ${
+                  currentQuestion.currentValue === option.key ? 'text-black/70' : 'text-white/50'
+                }`}>
+                  {option.description}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Skip button */}
+          <button
+            onClick={nextQuestion}
+            className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors"
+          >
+            SKIP
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Home screen
   return (
     <div className="min-h-screen bg-black text-white font-mono">
-      <div className="max-w-md mx-auto px-6 py-8">
+      <div className="max-w-md mx-auto px-6 py-12">
         {/* Header */}
-        <div className="mb-8">
-          <button 
-            onClick={() => setCurrentView('home')}
-            className="p-2 hover:bg-white/10 rounded transition-colors mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl font-bold tracking-wider mb-2">SAVED WORKOUTS</h1>
-          <p className="text-white/60 text-sm">Your favorite routines</p>
+        <div className="mb-16 text-center">
+          <h1 className="text-4xl font-bold tracking-wider mb-2">VIBE GYMING</h1>
+          <div className="w-16 h-px bg-white mx-auto mb-4"></div>
+          <p className="text-white/60 text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
         </div>
 
-        {/* Saved workouts list */}
-        <div className="space-y-4">
-          {savedWorkouts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-white/50 mb-4">No saved workouts yet</p>
-              <button
-                onClick={() => setCurrentView('home')}
-                className="px-6 py-2 border border-white/30 rounded-lg hover:bg-white/5 transition-colors"
-              >
-                CREATE YOUR FIRST WORKOUT
-              </button>
-            </div>
-          ) : (
-            savedWorkouts.map((saved) => (
-              <div key={saved.id} className="border border-white/20 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-bold text-sm tracking-wider mb-1">{saved.name}</h3>
-                    <p className="text-white/50 text-xs">
-                      {saved.workout.exercises.length} exercises • {saved.workout.totalDuration} min
-                    </p>
-                    <p className="text-white/50 text-xs">
-                      Completed {saved.timesCompleted} times
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => deleteSavedWorkout(saved.id)}
-                    className="text-white/40 hover:text-white/80 transition-colors"
-                  >
-                    ✕
-                  </button>
-                </div>
-                
-                <button
-                  onClick={() => loadSavedWorkout(saved)}
-                  className="w-full py-2 border border-white/30 rounded hover:bg-white/5 transition-colors text-sm font-medium"
-                >
-                  START WORKOUT
-                </button>
-              </div>
-            ))
-          )}
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-16">
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.streak}</div>
+            <div className="text-xs text-white/60 tracking-wider">STREAK</div>
+          </div>
+          
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.totalWorkouts}</div>
+            <div className="text-xs text-white/60 tracking-wider">SESSIONS</div>
+          </div>
+          
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.totalMinutes}</div>
+            <div className="text-xs text-white/60 tracking-wider">MINUTES</div>
+          </div>
         </div>
+
+        {/* Main CTA */}
+        <div className="mb-16">
+          <button
+            onClick={startQuestionnaire}
+            className="w-full h-16 bg-white text-black font-bold text-lg tracking-wider rounded-lg hover:bg-white/90 transition-colors flex items-center justify-center gap-3"
+          >
+            <Play className="w-6 h-6" />
+            START WORKOUT
+          </button>
+        </div>
+
+        {/* Quick presets */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium text-white/60 tracking-wider mb-6">QUICK OPTIONS</h3>
+          
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'small',
+                hasWeights: false,
+                intensity: 'light',
+                duration: 5,
+                focusArea: 'mobility'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">DESK BREAK</div>
+            <div className="text-xs text-white/50">5 MIN • MOBILITY • NO EQUIPMENT</div>
+          </button>
+          
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'big',
+                hasWeights: false,
+                intensity: 'intense',
+                duration: 10,
+                focusArea: 'cardio'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">ENERGY BOOST</div>
+            <div className="text-xs text-white/50">10 MIN • CARDIO • HIGH INTENSITY</div>
+          </button>
+          
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'big',
+                hasWeights: true,
+                intensity: 'moderate',
+                duration: 20,
+                focusArea: 'full-body'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">FULL SESSION</div>
+            <div className="text-xs text-white/50">20 MIN • FULL BODY • WITH WEIGHTS</div>
+          </button>
+        </div>
+
+        {/* Streak encouragement */}
+        {userStats.streak > 0 && (
+          <div className="mt-12 p-4 border border-white/30 rounded-lg text-center">
+            <div className="font-bold text-sm tracking-wider mb-1">
+              {userStats.streak} DAY STREAK
+            </div>
+            <div className="text-xs text-white/60">
+              KEEP THE MOMENTUM GOING
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
-}
-```
+};
 
-## 5. Update Home Screen:
-
-Add saved workouts button and loading state to main CTA:
-
-```typescript
-// In the home screen, add after stats section:
-<div className="mb-8">
-  <button
-    onClick={() => setCurrentView('saved')}
-    className="w-full py-3 border border-white/20 rounded-lg hover:bg-white/5 transition-colors mb-4"
-  >
-    <div className="font-bold text-sm tracking-wider mb-1">SAVED WORKOUTS</div>
-    <div className="text-xs text-white/50">{savedWorkouts.length} routines saved</div>
-  </button>
-</div>
-
-// Update the main CTA button:
-<button
-  onClick={startQuestionnaire}
-  disabled={isGenerating}
-  className="w-full h-16 bg-white text-black font-bold text-lg tracking-wider rounded-lg hover:bg-white/90 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
->
-  {isGenerating ? (
-    <>Loading...</>
-  ) : (
-    <>
-      <Play className="w-6 h-6" />
-      START NEW WORKOUT
-    </>
-  )}
-</button>
-```
-
-## 6. Update WorkoutTimer Component:
-
-Add save workout button to the workout timer component:
-
-```typescript
-// Add to WorkoutTimer props
-interface WorkoutTimerProps {
-  exercises: AIExercise[];
-  onComplete: () => void;
-  onExit: () => void;
-  onSaveWorkout?: () => void; // Add this
-}
-
-// In WorkoutTimer render, add save button:
-<button
-  onClick={onSaveWorkout}
-  className="px-4 py-2 border border-white/30 rounded hover:bg-white/5 transition-colors text-sm"
->
-  SAVE WORKOUT
-</button>
-```
-
-## Implementation Notes:
-
-1. **API Key Security**: In production, move the API calls to a backend service
-2. **Error Handling**: The code includes fallback workouts if AI fails
-3. **Local Storage**: Saves workouts locally for offline access
-4. **Loading States**: Shows loading during AI generation
-5. **Workout Stats**: Tracks how many times each saved workout is completed
-
-This integration will give you AI-powered workout generation with the ability to save and replay favorite routines!
+export default Index;
