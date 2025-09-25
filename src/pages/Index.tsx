@@ -312,14 +312,14 @@ const Index = () => {
     if (!currentQuestion) return null;
 
     return (
-      <div className="min-h-screen bg-black text-white font-mono">
+      <div className="min-h-screen bg-background text-foreground font-mono">
         <div className="max-w-md mx-auto px-6 py-8">
           {/* Progress bar */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <button 
                 onClick={prevQuestion}
-                className="p-2 hover:bg-white/10 rounded transition-colors"
+                className="p-2 hover:bg-muted rounded transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -327,9 +327,9 @@ const Index = () => {
                 {questionStep + 1} / {questions.length}
               </div>
             </div>
-            <div className="w-full bg-white/20 h-1 rounded">
+            <div className="w-full bg-muted h-1 rounded">
               <div 
-                className="bg-white h-1 rounded transition-all duration-300"
+                className="bg-primary h-1 rounded transition-all duration-300"
                 style={{ width: `${((questionStep + 1) / questions.length) * 100}%` }}
               />
             </div>
@@ -338,12 +338,12 @@ const Index = () => {
           {/* Question */}
           <div className="mb-12">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 border border-white/30 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 border border-border rounded-lg flex items-center justify-center bg-card">
                 {currentQuestion.icon}
               </div>
               <div>
                 <h1 className="text-xl font-bold tracking-wider">{currentQuestion.title}</h1>
-                <p className="text-white/70 text-sm">{currentQuestion.subtitle}</p>
+                <p className="text-muted-foreground text-sm">{currentQuestion.subtitle}</p>
               </div>
             </div>
           </div>
@@ -357,9 +357,9 @@ const Index = () => {
                   onChange={(e) => currentQuestion.onChange(e.target.value)}
                   placeholder="e.g. lower back pain, knee issues, avoid jumping..."
                   rows={4}
-                  className="w-full bg-black border-white/30 text-white placeholder:text-white/50 focus:border-white/60 font-mono"
+                  className="w-full bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono"
                 />
-                <p className="text-xs text-white/50 mt-2">Leave blank if none apply</p>
+                <p className="text-xs text-muted-foreground mt-2">Leave blank if none apply</p>
               </div>
             ) : currentQuestion.isSelect ? (
               <Select
@@ -369,15 +369,15 @@ const Index = () => {
                   setTimeout(nextQuestion, 150);
                 }}
               >
-                <SelectTrigger className="w-full bg-black border-white/30 text-white focus:border-white/60 font-mono">
+                <SelectTrigger className="w-full bg-card border-border text-foreground focus:border-primary font-mono">
                   <SelectValue placeholder="Select duration..." />
                 </SelectTrigger>
-                <SelectContent className="bg-black border-white/30 text-white font-mono">
+                <SelectContent className="bg-card border-border text-foreground font-mono">
                   {currentQuestion.selectOptions?.map((option) => (
                     <SelectItem 
                       key={option.value} 
                       value={option.value}
-                      className="text-white hover:bg-white/10 focus:bg-white/10"
+                      className="text-foreground hover:bg-muted focus:bg-muted"
                     >
                       {option.label}
                     </SelectItem>
@@ -394,15 +394,15 @@ const Index = () => {
                   }}
                   className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
                     currentQuestion.currentValue === option.key
-                      ? 'bg-white text-black border-white'
-                      : 'bg-black border-white/30 hover:border-white/60 hover:bg-white/5'
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card border-border hover:border-primary hover:bg-muted'
                   }`}
                 >
                   <div className="font-bold text-sm tracking-wider mb-1">
                     {option.label}
                   </div>
                   <div className={`text-xs ${
-                    currentQuestion.currentValue === option.key ? 'text-black/70' : 'text-white/50'
+                    currentQuestion.currentValue === option.key ? 'text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
                     {option.description}
                   </div>
@@ -414,7 +414,7 @@ const Index = () => {
           {/* Action button */}
           <button
             onClick={nextQuestion}
-            className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+            className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card"
           >
             {questionStep === questions.length - 1 ? 'GENERATE WORKOUT' : 'SKIP'}
           </button>
@@ -426,33 +426,33 @@ const Index = () => {
   // Saved workouts screen
   if (currentView === 'saved') {
     return (
-      <div className="min-h-screen bg-black text-white font-mono">
+      <div className="min-h-screen bg-background text-foreground font-mono">
         <div className="max-w-md mx-auto px-6 py-8">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
             <button 
               onClick={() => setCurrentView('home')}
-              className="p-2 hover:bg-white/10 rounded transition-colors"
+              className="p-2 hover:bg-muted rounded transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
               <h1 className="text-xl font-bold tracking-wider">SAVED WORKOUTS</h1>
-              <p className="text-white/60 text-sm">Your favorite routines</p>
+              <p className="text-muted-foreground text-sm">Your favorite routines</p>
             </div>
           </div>
 
           {/* Empty state */}
           {savedWorkouts.length === 0 ? (
             <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-6 border border-white/30 rounded-lg flex items-center justify-center">
-                <Bookmark className="w-8 h-8 text-white/60" />
+              <div className="w-16 h-16 mx-auto mb-6 border border-border rounded-lg flex items-center justify-center bg-card">
+                <Bookmark className="w-8 h-8 text-muted-foreground" />
               </div>
               <h2 className="text-lg font-bold tracking-wider mb-2">NO SAVED WORKOUTS YET</h2>
-              <p className="text-white/60 text-sm mb-8">Save your favorite routines for quick access</p>
+              <p className="text-muted-foreground text-sm mb-8">Save your favorite routines for quick access</p>
               <button
                 onClick={() => setCurrentView('home')}
-                className="px-6 py-3 bg-white text-black font-bold text-sm tracking-wider rounded-lg hover:bg-white/90 transition-colors"
+                className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
               >
                 CREATE YOUR FIRST WORKOUT
               </button>
@@ -461,27 +461,27 @@ const Index = () => {
             /* Saved workouts list */
             <div className="space-y-4">
               {savedWorkouts.map((savedWorkout) => (
-                <div key={savedWorkout.id} className="p-4 border border-white/20 rounded-lg">
+                <div key={savedWorkout.id} className="p-4 border border-border rounded-lg bg-card">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-bold text-sm tracking-wider mb-1">{savedWorkout.name}</h3>
-                      <div className="text-xs text-white/50">
+                      <div className="text-xs text-muted-foreground">
                         {savedWorkout.workout.exercises.length} exercises • {savedWorkout.preferences.duration} min
                       </div>
-                      <div className="text-xs text-white/50">
+                      <div className="text-xs text-muted-foreground">
                         Completed {savedWorkout.timesCompleted} times
                       </div>
                     </div>
                     <button
                       onClick={() => deleteSavedWorkout(savedWorkout.id)}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      className="p-1 hover:bg-muted rounded transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   <button
                     onClick={() => loadSavedWorkout(savedWorkout)}
-                    className="w-full py-2 bg-white text-black font-bold text-sm tracking-wider rounded hover:bg-white/90 transition-colors"
+                    className="w-full py-2 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded hover:bg-primary/90 transition-colors"
                   >
                     START WORKOUT
                   </button>
@@ -496,30 +496,30 @@ const Index = () => {
 
   // Home screen
   return (
-    <div className="min-h-screen bg-black text-white font-mono">
+    <div className="min-h-screen bg-background text-foreground font-mono">
       <div className="max-w-md mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-16 text-center">
           <h1 className="text-4xl font-bold tracking-wider mb-2">VIBE GYMING</h1>
-          <div className="w-16 h-px bg-white mx-auto mb-4"></div>
-          <p className="text-white/60 text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
+          <div className="w-16 h-px bg-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-16">
-          <div className="text-center p-4 border border-white/20 rounded-lg">
+          <div className="text-center p-4 border border-border rounded-lg bg-card">
             <div className="text-2xl font-bold mb-1">{userStats.streak}</div>
-            <div className="text-xs text-white/60 tracking-wider">STREAK</div>
+            <div className="text-xs text-muted-foreground tracking-wider">STREAK</div>
           </div>
           
-          <div className="text-center p-4 border border-white/20 rounded-lg">
+          <div className="text-center p-4 border border-border rounded-lg bg-card">
             <div className="text-2xl font-bold mb-1">{userStats.totalWorkouts}</div>
-            <div className="text-xs text-white/60 tracking-wider">SESSIONS</div>
+            <div className="text-xs text-muted-foreground tracking-wider">SESSIONS</div>
           </div>
           
-          <div className="text-center p-4 border border-white/20 rounded-lg">
+          <div className="text-center p-4 border border-border rounded-lg bg-card">
             <div className="text-2xl font-bold mb-1">{userStats.totalMinutes}</div>
-            <div className="text-xs text-white/60 tracking-wider">MINUTES</div>
+            <div className="text-xs text-muted-foreground tracking-wider">MINUTES</div>
           </div>
         </div>
 
@@ -527,13 +527,13 @@ const Index = () => {
         <div className="mb-16">
           <button
             onClick={() => setCurrentView('saved')}
-            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
           >
             <div className="flex items-center gap-3">
               <Bookmark className="w-5 h-5" />
               <div className="flex-1">
                 <div className="font-bold text-sm tracking-wide mb-1">SAVED WORKOUTS</div>
-                <div className="text-xs text-white/50">{savedWorkouts.length} routines saved</div>
+                <div className="text-xs text-muted-foreground">{savedWorkouts.length} routines saved</div>
               </div>
             </div>
           </button>
@@ -543,7 +543,7 @@ const Index = () => {
         <div className="mb-16">
           <button
             onClick={startQuestionnaire}
-            className="w-full h-16 bg-white text-black font-bold text-lg tracking-wider rounded-lg hover:bg-white/90 transition-colors flex items-center justify-center gap-3"
+            className="w-full h-16 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-3"
           >
             <Play className="w-6 h-6" />
             START WORKOUT
@@ -552,7 +552,7 @@ const Index = () => {
 
         {/* Quick presets */}
         <div className="space-y-4">
-          <h3 className="text-xs font-medium text-white/60 tracking-wider mb-6">QUICK OPTIONS</h3>
+          <h3 className="text-xs font-medium text-muted-foreground tracking-wider mb-6">QUICK OPTIONS</h3>
           
           <button
             onClick={async () => {
@@ -567,10 +567,10 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
           >
             <div className="font-bold text-sm tracking-wide mb-1">DESK BREAK</div>
-            <div className="text-xs text-white/50">5 MIN • MOBILITY • NO EQUIPMENT</div>
+            <div className="text-xs text-muted-foreground">5 MIN • MOBILITY • NO EQUIPMENT</div>
           </button>
           
           <button
@@ -586,10 +586,10 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
           >
             <div className="font-bold text-sm tracking-wide mb-1">ENERGY BOOST</div>
-            <div className="text-xs text-white/50">10 MIN • CARDIO • HIGH INTENSITY</div>
+            <div className="text-xs text-muted-foreground">10 MIN • CARDIO • HIGH INTENSITY</div>
           </button>
           
           <button
@@ -605,20 +605,20 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
           >
             <div className="font-bold text-sm tracking-wide mb-1">FULL SESSION</div>
-            <div className="text-xs text-white/50">20 MIN • FULL BODY • WITH WEIGHTS</div>
+            <div className="text-xs text-muted-foreground">20 MIN • FULL BODY • WITH WEIGHTS</div>
           </button>
         </div>
 
         {/* Streak encouragement */}
         {userStats.streak > 0 && (
-          <div className="mt-12 p-4 border border-white/30 rounded-lg text-center">
+          <div className="mt-12 p-4 border border-border rounded-lg bg-card text-center">
             <div className="font-bold text-sm tracking-wider mb-1">
               {userStats.streak} DAY STREAK
             </div>
-            <div className="text-xs text-white/60">
+            <div className="text-xs text-muted-foreground">
               KEEP THE MOMENTUM GOING
             </div>
           </div>
