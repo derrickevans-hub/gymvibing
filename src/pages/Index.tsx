@@ -372,12 +372,12 @@ const Index = () => {
                 <SelectTrigger className="w-full bg-card border-border text-foreground focus:border-primary font-mono">
                   <SelectValue placeholder="Select duration..." />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground font-mono">
+                <SelectContent className="bg-popover border-border text-popover-foreground font-mono z-50">
                   {currentQuestion.selectOptions?.map((option) => (
                     <SelectItem 
                       key={option.value} 
                       value={option.value}
-                      className="text-foreground hover:bg-muted focus:bg-muted"
+                      className="text-popover-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                     >
                       {option.label}
                     </SelectItem>
