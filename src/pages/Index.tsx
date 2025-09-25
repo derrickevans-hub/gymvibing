@@ -328,17 +328,26 @@ Requirements:
     
     // Convert AI response to your app's Workout format
     return {
-      exercises: aiWorkout.exercises.map(exercise => ({
+      id: `workout-${Date.now()}`,
+      exercises: aiWorkout.exercises.map((exercise, index) => ({
+        id: `exercise-${index + 1}`,
         name: exercise.name,
-        sets: exercise.sets,
-        reps: exercise.reps,
         duration: exercise.duration,
+        reps: parseInt(exercise.reps) || undefined,
+        sets: exercise.sets,
         instructions: exercise.instructions.join(' '),
-        restTime: exercise.restTime
+        formTips: ['Maintain proper form', 'Control the movement', 'Focus on quality over quantity'],
+        category: 'main' as const,
+        restAfter: exercise.restTime
       })),
       totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
-      warmupAdvice: aiWorkout.warmupAdvice,
-      cooldownAdvice: aiWorkout.cooldownAdvice
+      estimatedCalories: Math.round(aiWorkout.totalDuration * 8), // Rough estimate
+      preferences: {
+        timeMinutes: preferences.duration as 2 | 3 | 5,
+        spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
+        energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'moderate' ? 'medium' : 'high',
+        equipment: preferences.hasWeights ? 'chair' : 'none'
+      }
     };
   }
 }
