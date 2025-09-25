@@ -50,7 +50,7 @@ const Index = () => {
 
   // Load user stats from localStorage
   useEffect(() => {
-    const savedStats = localStorage.getItem('guideai-stats');
+    const savedStats = localStorage.getItem('vibe-gyming-stats');
     if (savedStats) {
       setUserStats(JSON.parse(savedStats));
     }
@@ -60,7 +60,7 @@ const Index = () => {
   const updateStats = (newStats: Partial<UserStats>) => {
     const updated = { ...userStats, ...newStats };
     setUserStats(updated);
-    localStorage.setItem('guideai-stats', JSON.stringify(updated));
+    localStorage.setItem('vibe-gyming-stats', JSON.stringify(updated));
   };
 
   const generateWorkout = () => {
@@ -298,9 +298,9 @@ const Index = () => {
       <div className="max-w-md mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-16 text-center">
-          <h1 className="text-4xl font-bold tracking-wider mb-2">GUIDEAI</h1>
+          <h1 className="text-4xl font-bold tracking-wider mb-2">VIBE GYMING</h1>
           <div className="w-16 h-px bg-white mx-auto mb-4"></div>
-          <p className="text-white/60 text-sm tracking-wide">SMART WORKOUTS FOR REAL PEOPLE</p>
+          <p className="text-white/60 text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
         </div>
 
         {/* Stats */}
