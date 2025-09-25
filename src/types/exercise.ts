@@ -27,6 +27,8 @@ export interface Workout {
   preferences: WorkoutPreferences;
 }
 
+export type FocusArea = 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
+
 export interface UserStats {
   streak: number;
   totalWorkouts: number;
