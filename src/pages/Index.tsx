@@ -1,25 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
+import { WorkoutPreferences, Workout, UserStats, FocusArea } from '@/types/exercise';
 import { WorkoutGenerator } from '@/utils/workoutGenerator';
 import WorkoutTimer from '@/components/WorkoutTimer';
 import { 
-  Zap, 
-  Clock, 
-  MapPin, 
-  Dumbbell,
   Play,
-  Settings,
+  ArrowLeft,
+  Clock,
+  MapPin,
+  Dumbbell,
   Target,
-  Timer,
-  TrendingUp
+  Zap,
+  Heart,
+  Cpu,
+  Activity
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+// Enhanced preferences type
+interface EnhancedWorkoutPreferences extends WorkoutPreferences {
+  spaceSize: 'small' | 'big';
+  hasWeights: boolean;
+  intensity: 'light' | 'moderate' | 'intense';
+  duration: 5 | 10 | 15 | 20 | 30;
+  focusArea: 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
+}
 
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'home' | 'customize' | 'workout'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout'>('home');
+  const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [userStats, setUserStats] = useState<UserStats>({
     streak: 0,
@@ -27,11 +36,16 @@ const Index = () => {
     totalMinutes: 0,
   });
 
-  const [preferences, setPreferences] = useState<WorkoutPreferences>({
-    timeMinutes: 3,
+  const [preferences, setPreferences] = useState<EnhancedWorkoutPreferences>({
+    timeMinutes: 15,
     spaceType: 'normal',
     energyLevel: 'medium',
     equipment: 'none',
+    spaceSize: 'big',
+    hasWeights: false,
+    intensity: 'moderate',
+    duration: 15,
+    focusArea: 'full-body',
   });
 
   // Load user stats from localStorage
@@ -57,31 +71,50 @@ const Index = () => {
 
   const handleWorkoutComplete = () => {
     if (workout) {
-      // Update streak logic
       const today = new Date().toDateString();
       const lastWorkout = userStats.lastWorkoutDate ? new Date(userStats.lastWorkoutDate).toDateString() : null;
       
       let newStreak = userStats.streak;
       if (lastWorkout === today) {
-        // Already worked out today, don't change streak
+        // Already worked out today
       } else if (lastWorkout === new Date(Date.now() - 86400000).toDateString()) {
-        // Worked out yesterday, increment streak
         newStreak = userStats.streak + 1;
       } else {
-        // Reset streak
         newStreak = 1;
       }
 
       updateStats({
         streak: newStreak,
         totalWorkouts: userStats.totalWorkouts + 1,
-        totalMinutes: userStats.totalMinutes + Math.round(workout.totalDuration / 60),
+        totalMinutes: userStats.totalMinutes + preferences.duration,
         lastWorkoutDate: new Date(),
       });
     }
     
     setCurrentView('home');
     setWorkout(null);
+    setQuestionStep(0);
+  };
+
+  const startQuestionnaire = () => {
+    setCurrentView('questionnaire');
+    setQuestionStep(0);
+  };
+
+  const nextQuestion = () => {
+    if (questionStep < 6) {
+      setQuestionStep(questionStep + 1);
+    } else {
+      generateWorkout();
+    }
+  };
+
+  const prevQuestion = () => {
+    if (questionStep > 0) {
+      setQuestionStep(questionStep - 1);
+    } else {
+      setCurrentView('home');
+    }
   };
 
   if (currentView === 'workout' && workout) {
@@ -92,260 +125,280 @@ const Index = () => {
         onExit={() => {
           setCurrentView('home');
           setWorkout(null);
+          setQuestionStep(0);
         }}
       />
     );
   }
 
-  if (currentView === 'customize') {
+  if (currentView === 'questionnaire') {
+    const questions = [
+      // Question 1: Space Size
+      {
+        title: "SPACE SIZE",
+        subtitle: "How much room do you have?",
+        icon: <MapPin className="w-6 h-6" />,
+        options: [
+          { key: 'small', label: 'SMALL SPACE', description: 'Apartment, office, hotel room' },
+          { key: 'big', label: 'BIG SPACE', description: 'Gym, yard, large room' }
+        ],
+        currentValue: preferences.spaceSize,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
+      },
+      // Question 2: Equipment
+      {
+        title: "EQUIPMENT",
+        subtitle: "What do you have available?",
+        icon: <Dumbbell className="w-6 h-6" />,
+        options: [
+          { key: false, label: 'NO WEIGHTS', description: 'Bodyweight only' },
+          { key: true, label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
+        ],
+        currentValue: preferences.hasWeights,
+        onChange: (value: boolean) => setPreferences(prev => ({ ...prev, hasWeights: value }))
+      },
+      // Question 3: Intensity
+      {
+        title: "INTENSITY",
+        subtitle: "How hard do you want to push?",
+        icon: <Zap className="w-6 h-6" />,
+        options: [
+          { key: 'light', label: 'LIGHT', description: 'Easy movement, recovery' },
+          { key: 'moderate', label: 'MODERATE', description: 'Steady effort' },
+          { key: 'intense', label: 'INTENSE', description: 'High energy, challenging' }
+        ],
+        currentValue: preferences.intensity,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, intensity: value as 'light' | 'moderate' | 'intense' }))
+      },
+      // Question 4: Duration
+      {
+        title: "DURATION",
+        subtitle: "How long can you workout?",
+        icon: <Clock className="w-6 h-6" />,
+        options: [
+          { key: 5, label: '5 MIN', description: 'Quick burst' },
+          { key: 10, label: '10 MIN', description: 'Short session' },
+          { key: 15, label: '15 MIN', description: 'Standard workout' },
+          { key: 20, label: '20 MIN', description: 'Extended session' },
+          { key: 30, label: '30 MIN', description: 'Full workout' }
+        ],
+        currentValue: preferences.duration,
+        onChange: (value: number) => setPreferences(prev => ({ ...prev, duration: value as 5 | 10 | 15 | 20 | 30, timeMinutes: value as 2 | 3 | 5 }))
+      },
+      // Question 5: Focus Area - Body Parts
+      {
+        title: "FOCUS AREA",
+        subtitle: "What do you want to target?",
+        icon: <Target className="w-6 h-6" />,
+        options: [
+          { key: 'upper-body', label: 'UPPER BODY', description: 'Arms, chest, shoulders, back' },
+          { key: 'lower-body', label: 'LOWER BODY', description: 'Legs, glutes, calves' },
+          { key: 'core', label: 'CORE', description: 'Abs, obliques, lower back' },
+          { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
+        ],
+        currentValue: preferences.focusArea,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+      },
+      // Question 6: Workout Type
+      {
+        title: "WORKOUT TYPE",
+        subtitle: "What style of training?",
+        icon: <Activity className="w-6 h-6" />,
+        options: [
+          { key: 'cardio', label: 'CARDIO', description: 'Heart rate, endurance' },
+          { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
+          { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
+        ],
+        currentValue: preferences.focusArea,
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+      }
+    ];
+
+    const currentQuestion = questions[questionStep];
+
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-sm mx-auto px-4 py-8">
-          {/* Clean header */}
+      <div className="min-h-screen bg-black text-white font-mono">
+        <div className="max-w-md mx-auto px-6 py-8">
+          {/* Progress bar */}
           <div className="mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => setCurrentView('home')} 
-              className="mb-6 -ml-2"
-              size="sm"
-            >
-              ← Back
-            </Button>
-            <h1 className="text-2xl font-semibold">Customize</h1>
-            <p className="text-muted-foreground text-sm mt-1">Personalize your workout</p>
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={prevQuestion}
+                className="p-2 hover:bg-white/10 rounded transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="text-sm font-medium">
+                {questionStep + 1} / {questions.length}
+              </div>
+            </div>
+            <div className="w-full bg-white/20 h-1 rounded">
+              <div 
+                className="bg-white h-1 rounded transition-all duration-300"
+                style={{ width: `${((questionStep + 1) / questions.length) * 100}%` }}
+              />
+            </div>
           </div>
 
-          <div className="space-y-8">
-            {/* Time Selection */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Timer className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="font-medium">Duration</h3>
+          {/* Question */}
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 border border-white/30 rounded-lg flex items-center justify-center">
+                {currentQuestion.icon}
               </div>
-              
-              <div className="space-y-4">
-                <Slider
-                  value={[preferences.timeMinutes]}
-                  onValueChange={(value) => setPreferences(prev => ({ ...prev, timeMinutes: value[0] as 2 | 3 | 5 }))}
-                  min={2}
-                  max={5}
-                  step={1}
-                  className="w-full"
-                />
-                <div className="text-center">
-                  <div className="text-3xl font-semibold text-primary">{preferences.timeMinutes}</div>
-                  <div className="text-muted-foreground text-sm">minutes</div>
-                </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-wider">{currentQuestion.title}</h1>
+                <p className="text-white/70 text-sm">{currentQuestion.subtitle}</p>
               </div>
             </div>
-
-            {/* Space Type */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="font-medium">Space</h3>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'tight', label: 'Tight' },
-                  { key: 'normal', label: 'Normal' },
-                  { key: 'outdoor', label: 'Outdoor' }
-                ].map((option) => (
-                  <Button
-                    key={option.key}
-                    variant={preferences.spaceType === option.key ? 'primary' : 'outline'}
-                    size="lg"
-                    onClick={() => setPreferences(prev => ({ ...prev, spaceType: option.key as any }))}
-                    className="h-12"
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Energy Level */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="font-medium">Energy</h3>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'low', label: 'Low' },
-                  { key: 'medium', label: 'Medium' },
-                  { key: 'high', label: 'High' }
-                ].map((option) => (
-                  <Button
-                    key={option.key}
-                    variant={preferences.energyLevel === option.key ? 'primary' : 'outline'}
-                    size="lg"
-                    onClick={() => setPreferences(prev => ({ ...prev, energyLevel: option.key as any }))}
-                    className="h-12"
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Equipment */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Dumbbell className="w-4 h-4 text-primary" />
-                </div>
-                <h3 className="font-medium">Equipment</h3>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: 'none', label: 'None' },
-                  { key: 'chair', label: 'Chair' },
-                  { key: 'wall', label: 'Wall' }
-                ].map((option) => (
-                  <Button
-                    key={option.key}
-                    variant={preferences.equipment === option.key ? 'primary' : 'outline'}
-                    size="lg"
-                    onClick={() => setPreferences(prev => ({ ...prev, equipment: option.key as any }))}
-                    className="h-12"
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Generate Button */}
-            <Button
-              variant="floating"
-              size="floating"
-              onClick={generateWorkout}
-              className="w-full mt-12"
-            >
-              <Play className="w-6 h-6" />
-            </Button>
           </div>
+
+          {/* Options */}
+          <div className="space-y-4 mb-12">
+            {currentQuestion.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  currentQuestion.onChange(option.key);
+                  setTimeout(nextQuestion, 150);
+                }}
+                className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
+                  currentQuestion.currentValue === option.key
+                    ? 'bg-white text-black border-white'
+                    : 'bg-black border-white/30 hover:border-white/60 hover:bg-white/5'
+                }`}
+              >
+                <div className="font-bold text-sm tracking-wider mb-1">
+                  {option.label}
+                </div>
+                <div className={`text-xs ${
+                  currentQuestion.currentValue === option.key ? 'text-black/70' : 'text-white/50'
+                }`}>
+                  {option.description}
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Skip button */}
+          <button
+            onClick={nextQuestion}
+            className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors"
+          >
+            SKIP
+          </button>
         </div>
       </div>
     );
   }
 
+  // Home screen
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-sm mx-auto px-4 py-8">
-        {/* Minimal header */}
-        <div className="mb-12">
-          <h1 className="text-3xl font-semibold tracking-tight mb-2">MicroFit</h1>
-          <p className="text-muted-foreground text-sm">Quick workouts for busy schedules</p>
+    <div className="min-h-screen bg-black text-white font-mono">
+      <div className="max-w-md mx-auto px-6 py-12">
+        {/* Header */}
+        <div className="mb-16 text-center">
+          <h1 className="text-4xl font-bold tracking-wider mb-2">MICROFIT</h1>
+          <div className="w-16 h-px bg-white mx-auto mb-4"></div>
+          <p className="text-white/60 text-sm tracking-wide">QUICK WORKOUTS FOR BUSY SCHEDULES</p>
         </div>
 
-        {/* Clean stats */}
-        <div className="grid grid-cols-3 gap-4 mb-12">
-          <div className="stat-card hover-lift">
-            <div className="text-2xl font-semibold mb-1">{userStats.streak}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider">Streak</div>
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-16">
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.streak}</div>
+            <div className="text-xs text-white/60 tracking-wider">STREAK</div>
           </div>
           
-          <div className="stat-card hover-lift">
-            <div className="text-2xl font-semibold mb-1">{userStats.totalWorkouts}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider">Sessions</div>
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.totalWorkouts}</div>
+            <div className="text-xs text-white/60 tracking-wider">SESSIONS</div>
           </div>
           
-          <div className="stat-card hover-lift">
-            <div className="text-2xl font-semibold mb-1">{userStats.totalMinutes}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider">Minutes</div>
+          <div className="text-center p-4 border border-white/20 rounded-lg">
+            <div className="text-2xl font-bold mb-1">{userStats.totalMinutes}</div>
+            <div className="text-xs text-white/60 tracking-wider">MINUTES</div>
           </div>
         </div>
 
-        {/* Main action */}
-        <div className="mb-8">
-          <Button
-            variant="floating"
-            size="floating"
-            onClick={generateWorkout}
-            className="w-full mb-4"
+        {/* Main CTA */}
+        <div className="mb-16">
+          <button
+            onClick={startQuestionnaire}
+            className="w-full h-16 bg-white text-black font-bold text-lg tracking-wider rounded-lg hover:bg-white/90 transition-colors flex items-center justify-center gap-3"
           >
             <Play className="w-6 h-6" />
-          </Button>
-          <div className="text-center">
-            <div className="font-medium mb-1">3-minute workout</div>
-            <div className="text-sm text-muted-foreground">Medium intensity • No equipment</div>
-          </div>
-        </div>
-
-        {/* Settings */}
-        <div className="mb-12">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => setCurrentView('customize')}
-            className="w-full"
-          >
-            <Settings className="w-4 h-4" />
-            Customize
-          </Button>
+            START WORKOUT
+          </button>
         </div>
 
         {/* Quick presets */}
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Quick Options</h3>
+          <h3 className="text-xs font-medium text-white/60 tracking-wider mb-6">QUICK OPTIONS</h3>
           
-          <div className="space-y-3">
-            <button
-              onClick={() => {
-                setPreferences({ timeMinutes: 2, spaceType: 'tight', energyLevel: 'low', equipment: 'chair' });
-                generateWorkout();
-              }}
-              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
-            >
-              <div className="font-medium mb-1">Desk Break</div>
-              <div className="text-sm text-muted-foreground">2 min • Stretches</div>
-            </button>
-            
-            <button
-              onClick={() => {
-                setPreferences({ timeMinutes: 3, spaceType: 'normal', energyLevel: 'high', equipment: 'none' });
-                generateWorkout();
-              }}
-              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
-            >
-              <div className="font-medium mb-1">Energy Boost</div>
-              <div className="text-sm text-muted-foreground">3 min • Cardio</div>
-            </button>
-            
-            <button
-              onClick={() => {
-                setPreferences({ timeMinutes: 5, spaceType: 'normal', energyLevel: 'low', equipment: 'none' });
-                generateWorkout();
-              }}
-              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
-            >
-              <div className="font-medium mb-1">Wind Down</div>
-              <div className="text-sm text-muted-foreground">5 min • Movement</div>
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'small',
+                hasWeights: false,
+                intensity: 'light',
+                duration: 5,
+                focusArea: 'mobility'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">DESK BREAK</div>
+            <div className="text-xs text-white/50">5 MIN • MOBILITY • NO EQUIPMENT</div>
+          </button>
+          
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'big',
+                hasWeights: false,
+                intensity: 'intense',
+                duration: 10,
+                focusArea: 'cardio'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">ENERGY BOOST</div>
+            <div className="text-xs text-white/50">10 MIN • CARDIO • HIGH INTENSITY</div>
+          </button>
+          
+          <button
+            onClick={() => {
+              setPreferences({
+                ...preferences,
+                spaceSize: 'big',
+                hasWeights: true,
+                intensity: 'moderate',
+                duration: 20,
+                focusArea: 'full-body'
+              });
+              generateWorkout();
+            }}
+            className="w-full text-left p-4 border border-white/20 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <div className="font-bold text-sm tracking-wide mb-1">FULL SESSION</div>
+            <div className="text-xs text-white/50">20 MIN • FULL BODY • WITH WEIGHTS</div>
+          </button>
         </div>
 
         {/* Streak encouragement */}
         {userStats.streak > 0 && (
-          <div className="mt-12 p-4 bg-success/5 border border-success/20 rounded-xl">
-            <div className="text-center">
-              <div className="text-sm font-medium text-success mb-1">
-                {userStats.streak} day streak
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Keep the momentum going
-              </div>
+          <div className="mt-12 p-4 border border-white/30 rounded-lg text-center">
+            <div className="font-bold text-sm tracking-wider mb-1">
+              {userStats.streak} DAY STREAK
+            </div>
+            <div className="text-xs text-white/60">
+              KEEP THE MOMENTUM GOING
             </div>
           </div>
         )}
