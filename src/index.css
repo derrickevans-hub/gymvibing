@@ -8,17 +8,17 @@ All colors MUST be HSL for consistent theming
 
 @layer base {
   :root {
-    /* Base colors */
-    --background: 0 0% 99%;
-    --foreground: 215 25% 15%;
+    /* Base colors - Dark Blue Theme */
+    --background: 220 35% 8%;
+    --foreground: 210 40% 95%;
 
     /* Card system */
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card: 220 30% 12%;
+    --card-foreground: 210 40% 95%;
 
     /* Popover system */
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover: 220 30% 12%;
+    --popover-foreground: 210 40% 95%;
 
     /* Primary - Energetic Teal */
     --primary: 185 84% 48%;
@@ -26,13 +26,13 @@ All colors MUST be HSL for consistent theming
     --primary-light: 185 84% 65%;
     --primary-dark: 185 84% 35%;
 
-    /* Secondary - Soft Blue-Gray */
-    --secondary: 210 25% 95%;
-    --secondary-foreground: 215 25% 25%;
+    /* Secondary - Dark Blue variation */
+    --secondary: 220 25% 15%;
+    --secondary-foreground: 210 40% 85%;
 
     /* Muted colors */
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 15% 55%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 215 15% 65%;
 
     /* Accent - Motivation Orange */
     --accent: 28 95% 58%;
@@ -40,9 +40,9 @@ All colors MUST be HSL for consistent theming
     --accent-light: 28 95% 70%;
 
     /* Success - Fresh Green */
-    --success: 142 76% 36%;
+    --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
-    --success-light: 142 76% 50%;
+    --success-light: 142 76% 60%;
 
     /* Warning - Warm Orange */
     --warning: 38 92% 50%;
@@ -53,8 +53,8 @@ All colors MUST be HSL for consistent theming
     --destructive-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 215 20% 88%;
-    --input: 215 20% 92%;
+    --border: 220 25% 20%;
+    --input: 220 25% 22%;
     --ring: 185 84% 48%;
 
     --radius: 0.5rem;
