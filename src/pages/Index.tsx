@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button-enhanced';
+import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
 import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
 import { WorkoutGenerator } from '@/utils/workoutGenerator';
 import WorkoutTimer from '@/components/WorkoutTimer';
@@ -12,10 +11,10 @@ import {
   MapPin, 
   Dumbbell,
   Play,
-  Calendar,
-  Flame,
+  Settings,
   Target,
-  Settings
+  Timer,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -100,22 +99,32 @@ const Index = () => {
 
   if (currentView === 'customize') {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto">
-          <div className="mb-6">
-            <Button variant="ghost" onClick={() => setCurrentView('home')} className="mb-4">
+      <div className="min-h-screen bg-background">
+        <div className="max-w-sm mx-auto px-4 py-8">
+          {/* Clean header */}
+          <div className="mb-8">
+            <Button 
+              variant="ghost" 
+              onClick={() => setCurrentView('home')} 
+              className="mb-6 -ml-2"
+              size="sm"
+            >
               ← Back
             </Button>
-            <h2 className="text-2xl font-bold text-center">Customize Workout</h2>
+            <h1 className="text-2xl font-semibold">Customize</h1>
+            <p className="text-muted-foreground text-sm mt-1">Personalize your workout</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Time Selection */}
-            <Card className="workout-card">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Workout Duration
-              </h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Timer className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-medium">Duration</h3>
+              </div>
+              
               <div className="space-y-4">
                 <Slider
                   value={[preferences.timeMinutes]}
@@ -126,98 +135,104 @@ const Index = () => {
                   className="w-full"
                 />
                 <div className="text-center">
-                  <span className="text-3xl font-bold text-primary">{preferences.timeMinutes}</span>
-                  <span className="text-muted-foreground ml-1">minutes</span>
+                  <div className="text-3xl font-semibold text-primary">{preferences.timeMinutes}</div>
+                  <div className="text-muted-foreground text-sm">minutes</div>
                 </div>
               </div>
-            </Card>
+            </div>
 
             {/* Space Type */}
-            <Card className="workout-card">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                Available Space
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-medium">Space</h3>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { key: 'tight', label: 'Tight Space' },
-                  { key: 'normal', label: 'Normal Room' },
+                  { key: 'tight', label: 'Tight' },
+                  { key: 'normal', label: 'Normal' },
                   { key: 'outdoor', label: 'Outdoor' }
                 ].map((option) => (
                   <Button
                     key={option.key}
-                    variant={preferences.spaceType === option.key ? 'hero' : 'gentle'}
-                    size="sm"
+                    variant={preferences.spaceType === option.key ? 'primary' : 'outline'}
+                    size="lg"
                     onClick={() => setPreferences(prev => ({ ...prev, spaceType: option.key as any }))}
-                    className="h-16 text-xs"
+                    className="h-12"
                   >
                     {option.label}
                   </Button>
                 ))}
               </div>
-            </Card>
+            </div>
 
             {/* Energy Level */}
-            <Card className="workout-card">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-primary" />
-                Energy Level
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-medium">Energy</h3>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { key: 'low', label: 'Low', icon: '😌' },
-                  { key: 'medium', label: 'Medium', icon: '💪' },
-                  { key: 'high', label: 'High', icon: '⚡' }
+                  { key: 'low', label: 'Low' },
+                  { key: 'medium', label: 'Medium' },
+                  { key: 'high', label: 'High' }
                 ].map((option) => (
                   <Button
                     key={option.key}
-                    variant={preferences.energyLevel === option.key ? 'hero' : 'gentle'}
-                    size="sm"
+                    variant={preferences.energyLevel === option.key ? 'primary' : 'outline'}
+                    size="lg"
                     onClick={() => setPreferences(prev => ({ ...prev, energyLevel: option.key as any }))}
-                    className="h-16 text-xs flex-col gap-1"
+                    className="h-12"
                   >
-                    <span className="text-lg">{option.icon}</span>
                     {option.label}
                   </Button>
                 ))}
               </div>
-            </Card>
+            </div>
 
             {/* Equipment */}
-            <Card className="workout-card">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Dumbbell className="w-5 h-5 text-primary" />
-                Equipment Available
-              </h3>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Dumbbell className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="font-medium">Equipment</h3>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
                 {[
-                  { key: 'none', label: 'None', icon: '🚫' },
-                  { key: 'chair', label: 'Chair', icon: '🪑' },
-                  { key: 'wall', label: 'Wall', icon: '🧱' }
+                  { key: 'none', label: 'None' },
+                  { key: 'chair', label: 'Chair' },
+                  { key: 'wall', label: 'Wall' }
                 ].map((option) => (
                   <Button
                     key={option.key}
-                    variant={preferences.equipment === option.key ? 'hero' : 'gentle'}
-                    size="sm"
+                    variant={preferences.equipment === option.key ? 'primary' : 'outline'}
+                    size="lg"
                     onClick={() => setPreferences(prev => ({ ...prev, equipment: option.key as any }))}
-                    className="h-16 text-xs flex-col gap-1"
+                    className="h-12"
                   >
-                    <span className="text-lg">{option.icon}</span>
                     {option.label}
                   </Button>
                 ))}
               </div>
-            </Card>
+            </div>
 
             {/* Generate Button */}
             <Button
-              variant="hero"
-              size="xl"
+              variant="floating"
+              size="floating"
               onClick={generateWorkout}
-              className="w-full"
+              className="w-full mt-12"
             >
-              <Play className="w-5 h-5" />
-              Generate Workout
+              <Play className="w-6 h-6" />
             </Button>
           </div>
         </div>
@@ -226,137 +241,110 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/8">
-      <div className="max-w-md mx-auto p-4">
-        {/* Header */}
-        <div className="text-center mb-8 pt-8">
-          <div className="animate-slide-up">
-            <h1 className="text-4xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-2">
-              MicroFit
-            </h1>
-            <p className="text-muted-foreground">AI-powered micro workouts for busy lives</p>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-sm mx-auto px-4 py-8">
+        {/* Minimal header */}
+        <div className="mb-12">
+          <h1 className="text-3xl font-semibold tracking-tight mb-2">MicroFit</h1>
+          <p className="text-muted-foreground text-sm">Quick workouts for busy schedules</p>
+        </div>
+
+        {/* Clean stats */}
+        <div className="grid grid-cols-3 gap-4 mb-12">
+          <div className="stat-card hover-lift">
+            <div className="text-2xl font-semibold mb-1">{userStats.streak}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Streak</div>
+          </div>
+          
+          <div className="stat-card hover-lift">
+            <div className="text-2xl font-semibold mb-1">{userStats.totalWorkouts}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Sessions</div>
+          </div>
+          
+          <div className="stat-card hover-lift">
+            <div className="text-2xl font-semibold mb-1">{userStats.totalMinutes}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Minutes</div>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          <Card className="workout-card text-center animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            <div className="text-2xl font-bold text-primary">{userStats.streak}</div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Flame className="w-3 h-3" />
-              Day Streak
-            </div>
-          </Card>
-          
-          <Card className="workout-card text-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <div className="text-2xl font-bold text-success">{userStats.totalWorkouts}</div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Target className="w-3 h-3" />
-              Workouts
-            </div>
-          </Card>
-          
-          <Card className="workout-card text-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <div className="text-2xl font-bold text-accent">{userStats.totalMinutes}</div>
-            <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-              <Clock className="w-3 h-3" />
-              Minutes
-            </div>
-          </Card>
-        </div>
-
-        {/* Quick Start */}
-        <div className="mb-6 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-          <h2 className="text-xl font-semibold mb-4">Quick Start</h2>
+        {/* Main action */}
+        <div className="mb-8">
           <Button
-            variant="hero"
-            size="xl"
+            variant="floating"
+            size="floating"
             onClick={generateWorkout}
-            className="w-full h-20 text-lg"
+            className="w-full mb-4"
           >
-            <div className="flex flex-col items-center gap-1">
-              <Play className="w-8 h-8" />
-              <span>Generate 3-Min Workout</span>
-              <span className="text-sm opacity-80">Medium intensity • No equipment</span>
-            </div>
+            <Play className="w-6 h-6" />
           </Button>
+          <div className="text-center">
+            <div className="font-medium mb-1">3-minute workout</div>
+            <div className="text-sm text-muted-foreground">Medium intensity • No equipment</div>
+          </div>
         </div>
 
-        {/* Customize Button */}
-        <div className="mb-8 animate-slide-up" style={{ animationDelay: '0.5s' }}>
+        {/* Settings */}
+        <div className="mb-12">
           <Button
-            variant="gentle"
+            variant="outline"
             size="lg"
             onClick={() => setCurrentView('customize')}
             className="w-full"
           >
-            <Settings className="w-5 h-5" />
-            Customize Workout
+            <Settings className="w-4 h-4" />
+            Customize
           </Button>
         </div>
 
-        {/* Quick Modes */}
-        <div className="space-y-3 animate-slide-up" style={{ animationDelay: '0.6s' }}>
-          <h3 className="text-lg font-semibold">Quick Modes</h3>
+        {/* Quick presets */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Quick Options</h3>
           
-          <Card className="workout-card">
-            <Button
-              variant="ghost"
+          <div className="space-y-3">
+            <button
               onClick={() => {
                 setPreferences({ timeMinutes: 2, spaceType: 'tight', energyLevel: 'low', equipment: 'chair' });
                 generateWorkout();
               }}
-              className="w-full justify-start h-auto p-4"
+              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
             >
-              <div className="text-left">
-                <div className="font-semibold">Desk Break</div>
-                <div className="text-sm text-muted-foreground">2-min stretches • Chair friendly</div>
-              </div>
-            </Button>
-          </Card>
-          
-          <Card className="workout-card">
-            <Button
-              variant="ghost"
+              <div className="font-medium mb-1">Desk Break</div>
+              <div className="text-sm text-muted-foreground">2 min • Stretches</div>
+            </button>
+            
+            <button
               onClick={() => {
                 setPreferences({ timeMinutes: 3, spaceType: 'normal', energyLevel: 'high', equipment: 'none' });
                 generateWorkout();
               }}
-              className="w-full justify-start h-auto p-4"
+              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
             >
-              <div className="text-left">
-                <div className="font-semibold">Energy Boost</div>
-                <div className="text-sm text-muted-foreground">3-min cardio burst • Get energized</div>
-              </div>
-            </Button>
-          </Card>
-          
-          <Card className="workout-card">
-            <Button
-              variant="ghost"
+              <div className="font-medium mb-1">Energy Boost</div>
+              <div className="text-sm text-muted-foreground">3 min • Cardio</div>
+            </button>
+            
+            <button
               onClick={() => {
                 setPreferences({ timeMinutes: 5, spaceType: 'normal', energyLevel: 'low', equipment: 'none' });
                 generateWorkout();
               }}
-              className="w-full justify-start h-auto p-4"
+              className="w-full text-left p-4 rounded-xl border border-border hover:bg-muted/30 transition-smooth"
             >
-              <div className="text-left">
-                <div className="font-semibold">Evening Wind-down</div>
-                <div className="text-sm text-muted-foreground">5-min gentle movement • Relax</div>
-              </div>
-            </Button>
-          </Card>
+              <div className="font-medium mb-1">Wind Down</div>
+              <div className="text-sm text-muted-foreground">5 min • Movement</div>
+            </button>
+          </div>
         </div>
 
-        {/* Motivational Message */}
+        {/* Streak encouragement */}
         {userStats.streak > 0 && (
-          <div className="mt-8 p-4 bg-gradient-to-r from-success/10 to-primary/10 rounded-xl border border-success/20 animate-slide-up">
+          <div className="mt-12 p-4 bg-success/5 border border-success/20 rounded-xl">
             <div className="text-center">
-              <div className="text-sm font-medium text-success">
-                🔥 Amazing! {userStats.streak} day streak!
+              <div className="text-sm font-medium text-success mb-1">
+                {userStats.streak} day streak
               </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Keep the momentum going with another quick workout
+              <div className="text-xs text-muted-foreground">
+                Keep the momentum going
               </div>
             </div>
           </div>

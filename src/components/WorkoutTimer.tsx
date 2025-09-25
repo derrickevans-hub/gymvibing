@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Exercise } from '@/types/exercise';
-import { Button } from '@/components/ui/button-enhanced';
+import { Button } from '@/components/ui/button-minimal';
 import { Progress } from '@/components/ui/progress';
-import { Card } from '@/components/ui/card';
-import { Play, Pause, SkipForward, RotateCcw, CheckCircle } from 'lucide-react';
+import { Play, Pause, SkipForward, RotateCcw, CheckCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WorkoutTimerProps {
@@ -77,16 +76,20 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
 
   if (isCompleted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-br from-success/10 to-primary/10">
-        <div className="animate-scale-bounce text-center">
-          <CheckCircle className="w-20 h-20 text-success mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-foreground mb-2">Workout Complete!</h2>
-          <p className="text-muted-foreground mb-8">Great job finishing your micro-workout!</p>
-          <div className="space-y-3">
-            <Button variant="hero" size="xl" onClick={onComplete} className="w-full">
-              Finish & Track Progress
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-sm mx-auto text-center">
+          <div className="w-20 h-20 mx-auto mb-8 rounded-full bg-success/10 flex items-center justify-center">
+            <CheckCircle className="w-12 h-12 text-success" />
+          </div>
+          
+          <h2 className="text-2xl font-semibold mb-2">Complete!</h2>
+          <p className="text-muted-foreground mb-12">Nice work on your micro-workout</p>
+          
+          <div className="space-y-4">
+            <Button variant="primary" size="xl" onClick={onComplete} className="w-full">
+              Continue
             </Button>
-            <Button variant="gentle" onClick={onExit} className="w-full">
+            <Button variant="outline" onClick={onExit} className="w-full">
               Back to Home
             </Button>
           </div>
@@ -96,95 +99,99 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      {/* Header with progress */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            Exercise {currentExerciseIndex + 1} of {totalExercises}
-          </span>
-          <Button variant="ghost" size="sm" onClick={onExit}>
-            Exit
+    <div className="min-h-screen bg-background">
+      <div className="max-w-sm mx-auto p-4">
+        {/* Clean header */}
+        <div className="flex items-center justify-between mb-6 pt-4">
+          <div>
+            <div className="text-sm text-muted-foreground">
+              {currentExerciseIndex + 1} of {totalExercises}
+            </div>
+            <Progress value={overallProgress} className="w-24 h-1 mt-2" />
+          </div>
+          <Button variant="ghost" size="icon" onClick={onExit}>
+            <X className="w-4 h-4" />
           </Button>
         </div>
-        <Progress value={overallProgress} className="h-2" />
-      </div>
 
-      {/* Current Exercise Card */}
-      <Card className="workout-card mb-6 animate-slide-up">
-        <div className="text-center">
-          {/* Exercise Animation Placeholder */}
-          <div className="exercise-demo mb-4">
-            <div className="w-24 h-24 mx-auto bg-primary/20 rounded-full flex items-center justify-center animate-pulse-soft">
-              <span className="text-3xl">🏃</span>
+        {/* Exercise content */}
+        <div className="text-center mb-12">
+          {/* Exercise demo */}
+          <div className="exercise-demo">
+            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-2xl flex items-center justify-center">
+              <span className="text-2xl">💪</span>
             </div>
           </div>
           
-          {/* Exercise Info */}
-          <h3 className="text-2xl font-bold text-foreground mb-2">{currentExercise.name}</h3>
-          <p className="text-muted-foreground mb-4">{currentExercise.instructions}</p>
+          {/* Exercise info */}
+          <h2 className="text-2xl font-semibold mb-3">{currentExercise.name}</h2>
+          <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+            {currentExercise.instructions}
+          </p>
           
-          {/* Timer Display */}
-          <div className="mb-6">
+          {/* Timer */}
+          <div className="mb-8">
             <div className={cn(
-              "text-6xl font-bold mb-2 transition-colors duration-300",
-              timeRemaining <= 5 ? "text-accent animate-bounce-gentle" : "text-primary"
+              "text-5xl font-semibold mb-2 transition-colors duration-300 tabular-nums",
+              timeRemaining <= 5 ? "text-primary animate-pulse" : "text-foreground"
             )}>
               {formatTime(timeRemaining)}
             </div>
             {currentExercise.reps && (
-              <p className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground">
                 Target: {currentExercise.reps} reps
-              </p>
+              </div>
             )}
           </div>
         </div>
-      </Card>
 
-      {/* Controls */}
-      <div className="flex gap-4 justify-center">
-        <Button
-          variant="gentle"
-          size="lg"
-          onClick={handleRepeat}
-          disabled={isPlaying}
-        >
-          <RotateCcw className="w-5 h-5" />
-          Repeat
-        </Button>
-        
-        <Button
-          variant="hero"
-          size="xl"
-          onClick={handlePlayPause}
-          className="px-12"
-        >
-          {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-          {isPlaying ? 'Pause' : 'Start'}
-        </Button>
-        
-        <Button
-          variant="gentle"
-          size="lg"
-          onClick={handleSkip}
-          disabled={currentExerciseIndex >= exercises.length - 1}
-        >
-          <SkipForward className="w-5 h-5" />
-          Skip
-        </Button>
-      </div>
-
-      {/* Exercise Queue */}
-      <div className="mt-8">
-        <h4 className="text-sm font-semibold text-muted-foreground mb-3">Coming Up:</h4>
-        <div className="space-y-2">
-          {exercises.slice(currentExerciseIndex + 1, currentExerciseIndex + 3).map((exercise, index) => (
-            <div key={exercise.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <span className="text-sm font-medium">{exercise.name}</span>
-              <span className="text-xs text-muted-foreground">{formatTime(exercise.duration)}</span>
-            </div>
-          ))}
+        {/* Controls */}
+        <div className="flex items-center justify-center gap-6 mb-8">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRepeat}
+            disabled={isPlaying}
+            className="w-12 h-12"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </Button>
+          
+          <Button
+            variant="primary"
+            size="floating"
+            onClick={handlePlayPause}
+          >
+            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleSkip}
+            disabled={currentExerciseIndex >= exercises.length - 1}
+            className="w-12 h-12"
+          >
+            <SkipForward className="w-4 h-4" />
+          </Button>
         </div>
+
+        {/* Next exercises */}
+        {exercises.slice(currentExerciseIndex + 1, currentExerciseIndex + 2).length > 0 && (
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider text-center">
+              Next
+            </div>
+            <div className="text-center p-3 bg-muted/30 rounded-lg">
+              <div className="font-medium text-sm">
+                {exercises[currentExerciseIndex + 1]?.name}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {formatTime(exercises[currentExerciseIndex + 1]?.duration || 0)}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
