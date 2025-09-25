@@ -37,7 +37,7 @@ const Index = () => {
   });
 
   const [preferences, setPreferences] = useState<EnhancedWorkoutPreferences>({
-    timeMinutes: 5,
+    timeMinutes: 15,
     spaceType: 'normal',
     energyLevel: 'medium',
     equipment: 'none',
@@ -50,7 +50,7 @@ const Index = () => {
 
   // Load user stats from localStorage
   useEffect(() => {
-    const savedStats = localStorage.getItem('microfit-stats');
+    const savedStats = localStorage.getItem('guideai-stats');
     if (savedStats) {
       setUserStats(JSON.parse(savedStats));
     }
@@ -60,7 +60,7 @@ const Index = () => {
   const updateStats = (newStats: Partial<UserStats>) => {
     const updated = { ...userStats, ...newStats };
     setUserStats(updated);
-    localStorage.setItem('microfit-stats', JSON.stringify(updated));
+    localStorage.setItem('guideai-stats', JSON.stringify(updated));
   };
 
   const generateWorkout = () => {
@@ -145,17 +145,17 @@ const Index = () => {
         currentValue: preferences.spaceSize,
         onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
       },
-      // Question 2: Equipment  
+      // Question 2: Equipment
       {
         title: "EQUIPMENT",
         subtitle: "What do you have available?",
         icon: <Dumbbell className="w-6 h-6" />,
         options: [
-          { key: 'false', label: 'NO WEIGHTS', description: 'Bodyweight only' },
-          { key: 'true', label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
+          { key: false, label: 'NO WEIGHTS', description: 'Bodyweight only' },
+          { key: true, label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
         ],
-        currentValue: preferences.hasWeights.toString(),
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, hasWeights: value === 'true' }))
+        currentValue: preferences.hasWeights,
+        onChange: (value: boolean) => setPreferences(prev => ({ ...prev, hasWeights: value }))
       },
       // Question 3: Intensity
       {
@@ -176,18 +176,14 @@ const Index = () => {
         subtitle: "How long can you workout?",
         icon: <Clock className="w-6 h-6" />,
         options: [
-          { key: '5', label: '5 MIN', description: 'Quick burst' },
-          { key: '10', label: '10 MIN', description: 'Short session' },
-          { key: '15', label: '15 MIN', description: 'Standard workout' },
-          { key: '20', label: '20 MIN', description: 'Extended session' },
-          { key: '30', label: '30 MIN', description: 'Full workout' }
+          { key: 5, label: '5 MIN', description: 'Quick burst' },
+          { key: 10, label: '10 MIN', description: 'Short session' },
+          { key: 15, label: '15 MIN', description: 'Standard workout' },
+          { key: 20, label: '20 MIN', description: 'Extended session' },
+          { key: 30, label: '30 MIN', description: 'Full workout' }
         ],
-        currentValue: preferences.duration.toString(),
-        onChange: (value: string) => {
-          const duration = parseInt(value) as 5 | 10 | 15 | 20 | 30;
-          const timeMinutes = duration <= 5 ? 2 : duration <= 10 ? 3 : 5;
-          setPreferences(prev => ({ ...prev, duration, timeMinutes: timeMinutes as 2 | 3 | 5 }));
-        }
+        currentValue: preferences.duration,
+        onChange: (value: number) => setPreferences(prev => ({ ...prev, duration: value as 5 | 10 | 15 | 20 | 30, timeMinutes: value as 2 | 3 | 5 }))
       },
       // Question 5: Focus Area - Body Parts
       {
@@ -201,7 +197,7 @@ const Index = () => {
           { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as FocusArea }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
       },
       // Question 6: Workout Type
       {
@@ -214,16 +210,11 @@ const Index = () => {
           { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as FocusArea }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
       }
     ];
 
     const currentQuestion = questions[questionStep];
-    
-    if (!currentQuestion) {
-      generateWorkout();
-      return null;
-    }
 
     return (
       <div className="min-h-screen bg-black text-white font-mono">
@@ -307,9 +298,9 @@ const Index = () => {
       <div className="max-w-md mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-16 text-center">
-          <h1 className="text-4xl font-bold tracking-wider mb-2">MICROFIT</h1>
+          <h1 className="text-4xl font-bold tracking-wider mb-2">GUIDEAI</h1>
           <div className="w-16 h-px bg-white mx-auto mb-4"></div>
-          <p className="text-white/60 text-sm tracking-wide">QUICK WORKOUTS FOR BUSY SCHEDULES</p>
+          <p className="text-white/60 text-sm tracking-wide">SMART WORKOUTS FOR REAL PEOPLE</p>
         </div>
 
         {/* Stats */}
