@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { WorkoutPreferences, Workout, UserStats, FocusArea } from '@/types/exercise';
-import { WorkoutGenerator } from '@/utils/workoutGenerator';
+import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
 import WorkoutTimer from '@/components/WorkoutTimer';
 import { 
   Play,
@@ -15,11 +13,335 @@ import {
   Target,
   Zap,
   Heart,
-  Cpu,
   Activity,
   Bookmark,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
+
+// Claude API Integration
+interface AIWorkoutRequest {
+  spaceSize: 'small' | 'big';
+  hasWeights: boolean;
+  intensity: 'light' | 'moderate' | 'intense';
+  duration: number;
+  focusArea: string;
+  notes: string;
+}
+
+interface AIExercise {
+  name: string;
+  sets: number;
+  reps: string;
+  duration: number;
+  instructions: string[];
+  restTime: number;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  muscleGroups: string[];
+}
+
+interface AIWorkoutResponse {
+  title: string;
+  totalDuration: number;
+  exercises: AIExercise[];
+  warmupAdvice: string;
+  cooldownAdvice: string;
+}
+
+// Claude Workout Generator Service
+class ClaudeWorkoutGenerator {
+  private static async callClaude(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
+    // Check if we have the API key
+    const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      console.warn('No Anthropic API key found, using fallback workout');
+      return this.getFallbackWorkout(preferences);
+    }
+
+    const notesSection = preferences.notes.trim() 
+      ? `\n- Special considerations/injuries to avoid: ${preferences.notes}` 
+      : '';
+      
+    const prompt = `Create a ${preferences.duration}-minute ${preferences.intensity} intensity workout for someone with:
+- Space: ${preferences.spaceSize} space
+- Equipment: ${preferences.hasWeights ? 'has weights/dumbbells' : 'no equipment (bodyweight only)'}
+- Focus: ${preferences.focusArea}${notesSection}
+
+Requirements:
+- Return ONLY valid JSON, no markdown or explanations
+- Include 4-8 exercises depending on duration
+- Each exercise should have: name, sets, reps (or time), instructions (3-4 bullet points), restTime, difficulty, muscleGroups
+- Include warmup and cooldown advice
+- Make instructions clear and beginner-friendly
+- If notes mention injuries/limitations, modify exercises accordingly and avoid movements that could aggravate those areas
+- Use this exact JSON structure:
+
+{
+  "title": "Workout Name",
+  "totalDuration": ${preferences.duration},
+  "exercises": [
+    {
+      "name": "Exercise Name",
+      "sets": 3,
+      "reps": "10-12",
+      "duration": 60,
+      "instructions": [
+        "Step 1 instruction",
+        "Step 2 instruction", 
+        "Step 3 instruction"
+      ],
+      "restTime": 30,
+      "difficulty": "beginner",
+      "muscleGroups": ["chest", "arms"]
+    }
+  ],
+  "warmupAdvice": "Light movement for 2-3 minutes",
+  "cooldownAdvice": "Gentle stretching for 2-3 minutes"
+}`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-sonnet-20240229',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.content[0].text;
+      return JSON.parse(content);
+    } catch (error) {
+      console.error('Claude API Error:', error);
+      return this.getFallbackWorkout(preferences);
+    }
+  }
+
+  private static getFallbackWorkout(preferences: AIWorkoutRequest): AIWorkoutResponse {
+    // Enhanced fallback workout based on preferences
+    const exercises: AIExercise[] = [];
+    
+    // Base exercises by focus area and equipment
+    if (preferences.focusArea === 'upper-body') {
+      if (preferences.hasWeights) {
+        exercises.push({
+          name: "Dumbbell Chest Press",
+          sets: 3,
+          reps: "8-12",
+          duration: 120,
+          instructions: [
+            "Lie on your back holding dumbbells above your chest",
+            "Lower weights to chest level with control",
+            "Press back up to starting position",
+            "Keep your core engaged throughout"
+          ],
+          restTime: 60,
+          difficulty: "beginner",
+          muscleGroups: ["chest", "shoulders", "triceps"]
+        });
+      } else {
+        exercises.push({
+          name: "Push-ups",
+          sets: 3,
+          reps: "8-15",
+          duration: 90,
+          instructions: [
+            "Start in plank position with hands under shoulders",
+            "Lower your chest toward the ground",
+            "Push back up maintaining straight line",
+            "Modify on knees if needed"
+          ],
+          restTime: 45,
+          difficulty: "beginner",
+          muscleGroups: ["chest", "shoulders", "triceps", "core"]
+        });
+      }
+    }
+
+    if (preferences.focusArea === 'lower-body') {
+      exercises.push({
+        name: "Bodyweight Squats",
+        sets: 3,
+        reps: "12-20",
+        duration: 90,
+        instructions: [
+          "Stand with feet shoulder-width apart",
+          "Lower down as if sitting in a chair",
+          "Keep chest up and knees behind toes",
+          "Stand back up squeezing glutes"
+        ],
+        restTime: 45,
+        difficulty: "beginner",
+        muscleGroups: ["quads", "glutes", "hamstrings"]
+      });
+    }
+
+    if (preferences.focusArea === 'core') {
+      exercises.push({
+        name: "Plank Hold",
+        sets: 3,
+        reps: "30-60 seconds",
+        duration: 60,
+        instructions: [
+          "Start in push-up position on forearms",
+          "Keep body in straight line from head to heels",
+          "Engage core and breathe steadily",
+          "Don't let hips sag or pike up"
+        ],
+        restTime: 30,
+        difficulty: "beginner",
+        muscleGroups: ["core", "shoulders"]
+      });
+    }
+
+    if (preferences.focusArea === 'cardio') {
+      if (preferences.spaceSize === 'big') {
+        exercises.push({
+          name: "Jumping Jacks",
+          sets: 4,
+          reps: "30 seconds",
+          duration: 30,
+          instructions: [
+            "Start standing with feet together",
+            "Jump feet apart while raising arms overhead",
+            "Jump back to starting position",
+            "Maintain steady rhythm"
+          ],
+          restTime: 30,
+          difficulty: "beginner",
+          muscleGroups: ["full-body", "cardiovascular"]
+        });
+      } else {
+        exercises.push({
+          name: "High Knees in Place",
+          sets: 4,
+          reps: "30 seconds",
+          duration: 30,
+          instructions: [
+            "Stand in place and lift knees to hip level",
+            "Pump arms as if running",
+            "Land softly on balls of feet",
+            "Keep core engaged"
+          ],
+          restTime: 30,
+          difficulty: "beginner",
+          muscleGroups: ["legs", "cardiovascular"]
+        });
+      }
+    }
+
+    if (preferences.focusArea === 'mobility') {
+      exercises.push({
+        name: "Cat-Cow Stretch",
+        sets: 2,
+        reps: "10-15",
+        duration: 60,
+        instructions: [
+          "Start on hands and knees",
+          "Arch back and look up (cow pose)",
+          "Round spine and tuck chin (cat pose)",
+          "Move slowly between positions"
+        ],
+        restTime: 15,
+        difficulty: "beginner",
+        muscleGroups: ["spine", "core"]
+      });
+    }
+
+    // Add more exercises based on duration
+    if (preferences.duration >= 15) {
+      exercises.push({
+        name: "Mountain Climbers",
+        sets: 3,
+        reps: "20 seconds",
+        duration: 60,
+        instructions: [
+          "Start in plank position",
+          "Alternate bringing knees to chest quickly",
+          "Keep hips level and core tight",
+          "Maintain plank position throughout"
+        ],
+        restTime: 40,
+        difficulty: "intermediate",
+        muscleGroups: ["core", "shoulders", "legs"]
+      });
+    }
+
+    if (preferences.duration >= 20 && preferences.focusArea !== 'mobility') {
+      exercises.push({
+        name: "Lunges",
+        sets: 3,
+        reps: "8-12 each leg",
+        duration: 120,
+        instructions: [
+          "Step forward into lunge position",
+          "Lower until both knees at 90 degrees",
+          "Push back to starting position",
+          "Alternate legs or complete one side first"
+        ],
+        restTime: 45,
+        difficulty: "beginner",
+        muscleGroups: ["quads", "glutes", "hamstrings"]
+      });
+    }
+
+    // Ensure we have enough exercises for the duration
+    while (exercises.length < Math.ceil(preferences.duration / 4) && exercises.length < 8) {
+      exercises.push({
+        name: "Arm Circles",
+        sets: 2,
+        reps: "10 each direction",
+        duration: 30,
+        instructions: [
+          "Extend arms out to sides",
+          "Make small circles forward",
+          "Then reverse direction",
+          "Keep arms straight and controlled"
+        ],
+        restTime: 15,
+        difficulty: "beginner",
+        muscleGroups: ["shoulders"]
+      });
+    }
+
+    return {
+      title: `${preferences.focusArea.replace('-', ' ').toUpperCase()} ${preferences.intensity.toUpperCase()} WORKOUT`,
+      totalDuration: preferences.duration,
+      exercises: exercises.slice(0, Math.min(8, Math.ceil(preferences.duration / 3))),
+      warmupAdvice: "Start with 2-3 minutes of light movement like marching in place or arm swings",
+      cooldownAdvice: "Finish with 2-3 minutes of gentle stretching focusing on the muscles you worked"
+    };
+  }
+
+  static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
+    const aiWorkout = await this.callClaude(preferences);
+    
+    // Convert AI response to your app's Workout format
+    return {
+      exercises: aiWorkout.exercises.map(exercise => ({
+        name: exercise.name,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        duration: exercise.duration,
+        instructions: exercise.instructions.join(' '),
+        restTime: exercise.restTime
+      })),
+      totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
+      warmupAdvice: aiWorkout.warmupAdvice,
+      cooldownAdvice: aiWorkout.cooldownAdvice
+    };
+  }
+}
 
 // Enhanced preferences type
 interface EnhancedWorkoutPreferences extends WorkoutPreferences {
@@ -46,6 +368,7 @@ const Index = () => {
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [userStats, setUserStats] = useState<UserStats>({
     streak: 0,
     totalWorkouts: 0,
@@ -86,14 +409,24 @@ const Index = () => {
   };
 
   const generateWorkout = async () => {
+    setIsGenerating(true);
     try {
-      const { ClaudeWorkoutGenerator } = await import('@/utils/claudeWorkoutGenerator');
-      const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(preferences);
+      const aiRequest: AIWorkoutRequest = {
+        spaceSize: preferences.spaceSize,
+        hasWeights: preferences.hasWeights,
+        intensity: preferences.intensity,
+        duration: preferences.duration,
+        focusArea: preferences.focusArea,
+        notes: preferences.notes,
+      };
+      
+      const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(aiRequest);
       setWorkout(newWorkout);
       setCurrentView('workout');
     } catch (error) {
       console.error('Failed to generate workout:', error);
-      // You could show a toast notification here
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -217,18 +550,18 @@ const Index = () => {
         currentValue: preferences.spaceSize,
         onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
       },
-        // Question 2: Equipment
-        {
-          title: "EQUIPMENT",
-          subtitle: "What do you have available?",
-          icon: <Dumbbell className="w-6 h-6" />,
-          options: [
-            { key: 'false', label: 'NO WEIGHTS', description: 'Bodyweight only' },
-            { key: 'true', label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
-          ],
-          currentValue: preferences.hasWeights.toString(),
-          onChange: (value: string) => setPreferences(prev => ({ ...prev, hasWeights: value === 'true' }))
-        },
+      // Question 2: Equipment
+      {
+        title: "EQUIPMENT",
+        subtitle: "What do you have available?",
+        icon: <Dumbbell className="w-6 h-6" />,
+        options: [
+          { key: 'false', label: 'NO WEIGHTS', description: 'Bodyweight only' },
+          { key: 'true', label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
+        ],
+        currentValue: preferences.hasWeights.toString(),
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, hasWeights: value === 'true' }))
+      },
       // Question 3: Intensity
       {
         title: "INTENSITY",
@@ -253,22 +586,7 @@ const Index = () => {
           const timeMinutes = duration <= 5 ? 5 : duration <= 10 ? 3 : 2;
           setPreferences(prev => ({ ...prev, duration, timeMinutes: timeMinutes as 2 | 3 | 5 }));
         },
-        isSelect: true,
-        selectOptions: [
-          { value: '5', label: '5 minutes' },
-          { value: '10', label: '10 minutes' },
-          { value: '15', label: '15 minutes' },
-          { value: '20', label: '20 minutes' },
-          { value: '30', label: '30 minutes' },
-          { value: '45', label: '45 minutes' },
-          { value: '60', label: '1 hour' },
-          { value: '75', label: '1 hour 15 minutes' },
-          { value: '90', label: '1 hour 30 minutes' },
-          { value: '105', label: '1 hour 45 minutes' },
-          { value: '120', label: '2 hours' },
-          { value: '135', label: '2 hours 15 minutes' },
-          { value: '150', label: '2 hours 30 minutes' }
-        ]
+        isSelect: true
       },
       // Question 5: Focus Area - Body Parts
       {
@@ -282,7 +600,7 @@ const Index = () => {
           { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility' }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
       },
       // Question 6: Workout Type
       {
@@ -295,7 +613,7 @@ const Index = () => {
           { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
         ],
         currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility' }))
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
       },
       // Question 7: Notes
       {
@@ -320,6 +638,7 @@ const Index = () => {
               <button 
                 onClick={prevQuestion}
                 className="p-2 hover:bg-muted rounded transition-colors"
+                disabled={isGenerating}
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -358,6 +677,7 @@ const Index = () => {
                   placeholder="e.g. lower back pain, knee issues, avoid jumping..."
                   rows={4}
                   className="w-full bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono"
+                  disabled={isGenerating}
                 />
                 <p className="text-xs text-muted-foreground mt-2">Leave blank if none apply</p>
               </div>
@@ -372,12 +692,7 @@ const Index = () => {
                   { value: '30', label: '30 min' },
                   { value: '45', label: '45 min' },
                   { value: '60', label: '1 hr' },
-                  { value: '75', label: '1h 15m' },
-                  { value: '90', label: '1h 30m' },
-                  { value: '105', label: '1h 45m' },
-                  { value: '120', label: '2 hrs' },
-                  { value: '135', label: '2h 15m' },
-                  { value: '150', label: '2h 30m' }
+                  { value: '90', label: '1h 30m' }
                 ].map((duration) => (
                   <button
                     key={duration.value}
@@ -385,7 +700,8 @@ const Index = () => {
                       currentQuestion.onChange(duration.value);
                       setTimeout(nextQuestion, 150);
                     }}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
+                    disabled={isGenerating}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 ${
                       currentQuestion.currentValue === duration.value
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-card text-foreground border-border hover:bg-muted'
@@ -403,7 +719,8 @@ const Index = () => {
                     currentQuestion.onChange(option.key);
                     setTimeout(nextQuestion, 150);
                   }}
-                  className={`w-full p-4 border rounded-lg transition-all duration-200 text-left ${
+                  disabled={isGenerating}
+                  className={`w-full p-4 border rounded-lg transition-all duration-200 text-left disabled:opacity-50 ${
                     currentQuestion.currentValue === option.key
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-card border-border hover:border-primary hover:bg-muted'
@@ -425,9 +742,17 @@ const Index = () => {
           {/* Action button */}
           <button
             onClick={nextQuestion}
-            className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card"
+            disabled={isGenerating}
+            className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {questionStep === questions.length - 1 ? 'GENERATE WORKOUT' : 'SKIP'}
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                GENERATING WORKOUT...
+              </>
+            ) : (
+              questionStep === questions.length - 1 ? 'GENERATE WORKOUT' : 'SKIP'
+            )}
           </button>
         </div>
       </div>
@@ -554,10 +879,20 @@ const Index = () => {
         <div className="mb-16">
           <button
             onClick={startQuestionnaire}
-            className="w-full h-16 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-3"
+            disabled={isGenerating}
+            className="w-full h-16 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
           >
-            <Play className="w-6 h-6" />
-            START WORKOUT
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                GENERATING...
+              </>
+            ) : (
+              <>
+                <Play className="w-6 h-6" />
+                START WORKOUT
+              </>
+            )}
           </button>
         </div>
 
@@ -578,7 +913,8 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
+            disabled={isGenerating}
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
           >
             <div className="font-bold text-sm tracking-wide mb-1">DESK BREAK</div>
             <div className="text-xs text-muted-foreground">5 MIN • MOBILITY • NO EQUIPMENT</div>
@@ -597,7 +933,8 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
+            disabled={isGenerating}
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
           >
             <div className="font-bold text-sm tracking-wide mb-1">ENERGY BOOST</div>
             <div className="text-xs text-muted-foreground">10 MIN • CARDIO • HIGH INTENSITY</div>
@@ -616,7 +953,8 @@ const Index = () => {
               });
               await generateWorkout();
             }}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
+            disabled={isGenerating}
+            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
           >
             <div className="font-bold text-sm tracking-wide mb-1">FULL SESSION</div>
             <div className="text-xs text-muted-foreground">20 MIN • FULL BODY • WITH WEIGHTS</div>
