@@ -50,79 +50,30 @@ interface AIWorkoutResponse {
 
 // Claude Workout Generator Service
 class ClaudeWorkoutGenerator {
-  private static async callClaude(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
-    // Check if we have the API key
-    const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      console.warn('No Anthropic API key found, using fallback workout');
-      return this.getFallbackWorkout(preferences);
-    }
-
-    const notesSection = preferences.notes.trim() 
-      ? `\n- Special considerations/injuries to avoid: ${preferences.notes}` 
-      : '';
-      
-    const prompt = `Create a ${preferences.duration}-minute ${preferences.intensity} intensity workout for someone with:
-- Space: ${preferences.spaceSize} space
-- Equipment: ${preferences.hasWeights ? 'has weights/dumbbells' : 'no equipment (bodyweight only)'}
-- Focus: ${preferences.focusArea}${notesSection}
-
-Requirements:
-- Return ONLY valid JSON, no markdown or explanations
-- Include 4-8 exercises depending on duration
-- Each exercise should have: name, sets, reps (or time), instructions (3-4 bullet points), restTime, difficulty, muscleGroups
-- Include warmup and cooldown advice
-- Make instructions clear and beginner-friendly
-- If notes mention injuries/limitations, modify exercises accordingly and avoid movements that could aggravate those areas
-- Use this exact JSON structure:
-
-{
-  "title": "Workout Name",
-  "totalDuration": ${preferences.duration},
-  "exercises": [
-    {
-      "name": "Exercise Name",
-      "sets": 3,
-      "reps": "10-12",
-      "duration": 60,
-      "instructions": [
-        "Step 1 instruction",
-        "Step 2 instruction", 
-        "Step 3 instruction"
-      ],
-      "restTime": 30,
-      "difficulty": "beginner",
-      "muscleGroups": ["chest", "arms"]
-    }
-  ],
-  "warmupAdvice": "Light movement for 2-3 minutes",
-  "cooldownAdvice": "Gentle stretching for 2-3 minutes"
-}`;
-
+  private static async callSupabaseEdgeFunction(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(`https://gfaorzadtmwcoyofxhvu.supabase.co/functions/v1/generate-workout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 2000,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        body: JSON.stringify(preferences)
       });
 
       if (!response.ok) {
-        throw new Error(`API call failed: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      const content = data.content[0].text;
-      return JSON.parse(content);
+      return {
+        title: data.title || 'Custom Workout',
+        totalDuration: data.totalDuration,
+        exercises: data.exercises,
+        warmupAdvice: data.warmupAdvice || 'Start with light movement',
+        cooldownAdvice: data.cooldownAdvice || 'End with gentle stretching'
+      };
     } catch (error) {
-      console.error('Claude API Error:', error);
+      console.error('Supabase Edge Function Error:', error);
       return this.getFallbackWorkout(preferences);
     }
   }
@@ -324,7 +275,7 @@ Requirements:
   }
 
   static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
-    const aiWorkout = await this.callClaude(preferences);
+    const aiWorkout = await this.callSupabaseEdgeFunction(preferences);
     
     // Convert AI response to your app's Workout format
     return {
