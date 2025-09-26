@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
 import WorkoutTimer from '@/components/WorkoutTimer';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import Auth from '@/components/Auth';
 import { 
   Play,
   ArrowLeft,
@@ -330,11 +332,12 @@ interface SavedWorkout {
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout-preview' | 'workout' | 'saved'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout-preview' | 'workout' | 'saved' | 'auth'>('home');
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [userStats, setUserStats] = useState<UserStats>({
     streak: 0,
     totalWorkouts: 0,
@@ -354,18 +357,71 @@ const Index = () => {
     notes: '',
   });
 
-  // Load user stats and saved workouts from localStorage
+  // Load user stats and saved workouts from localStorage and database
   useEffect(() => {
+    // Check auth state
+    checkAuth();
+    
     const savedStats = localStorage.getItem('vibe-gyming-stats');
     if (savedStats) {
       setUserStats(JSON.parse(savedStats));
     }
     
-    const savedWorkoutsData = localStorage.getItem('vibe-gyming-saved');
-    if (savedWorkoutsData) {
-      setSavedWorkouts(JSON.parse(savedWorkoutsData));
-    }
+    // Set up auth listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          loadSavedWorkouts();
+        } else {
+          setSavedWorkouts([]);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setUser(user);
+    if (user) {
+      loadSavedWorkouts();
+    }
+  };
+
+  const loadSavedWorkouts = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from('saved_workouts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading saved workouts:', error);
+          return;
+        }
+
+        // Convert database format to app format
+        const convertedWorkouts = data?.map(savedWorkout => ({
+          id: savedWorkout.id,
+          name: savedWorkout.name,
+          workout: savedWorkout.workout_data as unknown as Workout,
+          preferences: savedWorkout.preferences as unknown as EnhancedWorkoutPreferences,
+          savedAt: new Date(savedWorkout.created_at),
+          timesCompleted: savedWorkout.times_completed,
+        })) || [];
+
+        setSavedWorkouts(convertedWorkouts);
+      }
+    } catch (error) {
+      console.error('Error loading saved workouts:', error);
+    }
+  };
 
   // Save user stats to localStorage
   const updateStats = (newStats: Partial<UserStats>) => {
@@ -471,26 +527,61 @@ const Index = () => {
     localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
   };
 
-  const loadSavedWorkout = (savedWorkout: SavedWorkout) => {
-    setWorkout(savedWorkout.workout);
-    setPreferences(savedWorkout.preferences);
-    
-    // Update times completed
-    const updatedSaved = savedWorkouts.map(sw => 
-      sw.id === savedWorkout.id 
-        ? { ...sw, timesCompleted: sw.timesCompleted + 1 }
-        : sw
-    );
-    setSavedWorkouts(updatedSaved);
-    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
-    
-    setCurrentView('workout');
+  const loadSavedWorkout = async (savedWorkout: SavedWorkout) => {
+    try {
+      setWorkout(savedWorkout.workout);
+      setPreferences(savedWorkout.preferences);
+      
+      // Update times completed in database
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('saved_workouts')
+          .update({ times_completed: savedWorkout.timesCompleted + 1 })
+          .eq('id', savedWorkout.id)
+          .eq('user_id', user.id);
+      }
+      
+      // Update local state
+      const updatedSaved = savedWorkouts.map(sw => 
+        sw.id === savedWorkout.id 
+          ? { ...sw, timesCompleted: sw.timesCompleted + 1 }
+          : sw
+      );
+      setSavedWorkouts(updatedSaved);
+      
+      setCurrentView('workout');
+    } catch (error) {
+      console.error('Error loading saved workout:', error);
+    }
   };
 
-  const deleteSavedWorkout = (workoutId: string) => {
-    const updatedSaved = savedWorkouts.filter(sw => sw.id !== workoutId);
-    setSavedWorkouts(updatedSaved);
-    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
+  const deleteSavedWorkout = async (workoutId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('saved_workouts')
+          .delete()
+          .eq('id', workoutId)
+          .eq('user_id', user.id);
+      }
+      
+      const updatedSaved = savedWorkouts.filter(sw => sw.id !== workoutId);
+      setSavedWorkouts(updatedSaved);
+    } catch (error) {
+      console.error('Error deleting saved workout:', error);
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSavedWorkouts([]);
+    toast({
+      title: "Signed out",
+      description: "You've been successfully signed out.",
+    });
   };
 
   const nextQuestion = async () => {
@@ -508,6 +599,25 @@ const Index = () => {
       setCurrentView('home');
     }
   };
+
+  // Auth view
+  if (currentView === 'auth') {
+    return (
+      <div className="min-h-screen bg-background text-foreground font-mono">
+        <div className="max-w-md mx-auto px-6 py-12">
+          <div className="mb-8">
+            <button 
+              onClick={() => setCurrentView('home')}
+              className="p-2 hover:bg-muted rounded transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          </div>
+          <Auth onAuthSuccess={() => setCurrentView('home')} />
+        </div>
+      </div>
+    );
+  }
 
   if (currentView === 'workout' && workout) {
     return (
@@ -766,7 +876,21 @@ const Index = () => {
           </div>
 
           {/* Empty state */}
-          {savedWorkouts.length === 0 ? (
+          {!user ? (
+            <div className="text-center py-16">
+              <div className="w-16 h-16 mx-auto mb-6 border border-border rounded-lg flex items-center justify-center bg-card">
+                <Bookmark className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-bold tracking-wider mb-2">SIGN IN TO SAVE WORKOUTS</h2>
+              <p className="text-muted-foreground text-sm mb-8">Create an account to save and access your favorite routines</p>
+              <button
+                onClick={() => setCurrentView('auth')}
+                className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                SIGN IN
+              </button>
+            </div>
+          ) : savedWorkouts.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-16 h-16 mx-auto mb-6 border border-border rounded-lg flex items-center justify-center bg-card">
                 <Bookmark className="w-8 h-8 text-muted-foreground" />
@@ -823,7 +947,25 @@ const Index = () => {
       <div className="max-w-md mx-auto px-6 py-12">
         {/* Header */}
         <div className="mb-16 text-center">
-          <h1 className="text-4xl font-bold tracking-wider mb-2">VIBE GYMING</h1>
+          <div className="flex items-center justify-between mb-6">
+            <div></div>
+            <h1 className="text-4xl font-bold tracking-wider">VIBE GYMING</h1>
+            {user ? (
+              <button
+                onClick={signOut}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                SIGN OUT
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentView('auth')}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                SIGN IN
+              </button>
+            )}
+          </div>
           <div className="w-16 h-px bg-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
         </div>
@@ -847,20 +989,22 @@ const Index = () => {
         </div>
 
         {/* Saved Workouts */}
-        <div className="mb-16">
-          <button
-            onClick={() => setCurrentView('saved')}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Bookmark className="w-5 h-5" />
-              <div className="flex-1">
-                <div className="font-bold text-sm tracking-wide mb-1">SAVED WORKOUTS</div>
-                <div className="text-xs text-muted-foreground">{savedWorkouts.length} routines saved</div>
+        {user && (
+          <div className="mb-16">
+            <button
+              onClick={() => setCurrentView('saved')}
+              className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Bookmark className="w-5 h-5" />
+                <div className="flex-1">
+                  <div className="font-bold text-sm tracking-wide mb-1">SAVED WORKOUTS</div>
+                  <div className="text-xs text-muted-foreground">{savedWorkouts.length} routines saved</div>
+                </div>
               </div>
-            </div>
-          </button>
-        </div>
+            </button>
+          </div>
+        )}
 
         {/* Main CTA */}
         <div className="mb-16">

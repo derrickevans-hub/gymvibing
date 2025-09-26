@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Workout } from '@/types/exercise';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface WorkoutPlanState {
   workout: Workout;
@@ -28,7 +29,9 @@ interface WorkoutPlanState {
 const WorkoutPlan = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   
   const state = location.state as WorkoutPlanState;
   
@@ -103,22 +106,52 @@ const WorkoutPlan = () => {
     });
   };
 
-  const saveWorkout = () => {
-    const focusLabel = (preferences.focusArea || 'workout').replace('-', ' ').toUpperCase();
-    const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
-    
-    const savedWorkout = {
-      id: Date.now().toString(),
-      name: workoutName,
-      workout,
-      preferences,
-      savedAt: new Date(),
-      timesCompleted: 0,
-    };
-    
-    const existingSaved = JSON.parse(localStorage.getItem('vibe-gyming-saved') || '[]');
-    const updatedSaved = [...existingSaved, savedWorkout];
-    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
+  const saveWorkout = async () => {
+    setIsSaving(true);
+    try {
+      // Check if user is authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to save workouts.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const focusLabel = (preferences.focusArea || 'workout').replace('-', ' ').toUpperCase();
+      const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
+      
+      const { error } = await supabase
+        .from('saved_workouts')
+        .insert({
+          user_id: user.id,
+          name: workoutName,
+          workout_data: workout as any,
+          preferences: preferences as any,
+          times_completed: 0
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Workout Saved",
+        description: "Your workout has been saved to your dashboard.",
+      });
+    } catch (error) {
+      console.error('Error saving workout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save workout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -245,10 +278,20 @@ const WorkoutPlan = () => {
             
             <button
               onClick={saveWorkout}
-              className="py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card flex items-center justify-center gap-2"
+              disabled={isSaving}
+              className="py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Bookmark className="w-4 h-4" />
-              SAVE WORKOUT
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  SAVING...
+                </>
+              ) : (
+                <>
+                  <Bookmark className="w-4 h-4" />
+                  SAVE WORKOUT
+                </>
+              )}
             </button>
           </div>
         </div>
