@@ -104,7 +104,7 @@ const WorkoutPlan = () => {
   };
 
   const saveWorkout = () => {
-    const focusLabel = preferences.focusArea.replace('-', ' ').toUpperCase();
+    const focusLabel = (preferences.focusArea || 'workout').replace('-', ' ').toUpperCase();
     const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
     
     const savedWorkout = {
@@ -135,7 +135,7 @@ const WorkoutPlan = () => {
           <div>
             <h1 className="text-2xl font-bold tracking-wider">YOUR WORKOUT PLAN</h1>
             <p className="text-muted-foreground text-sm">
-              {preferences.duration} min • {preferences.focusArea.replace('-', ' ')} • {preferences.intensity} intensity
+              {preferences.duration} min • {(preferences.focusArea || 'workout').replace('-', ' ')} • {preferences.intensity} intensity
             </p>
           </div>
         </div>
