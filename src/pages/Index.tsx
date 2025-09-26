@@ -21,6 +21,8 @@ import {
   Loader2
 } from 'lucide-react';
 
+import { ClaudeWorkoutGenerator as ClaudeWG } from '@/utils/claudeWorkoutGenerator';
+
 // Claude API Integration
 interface AIWorkoutRequest {
   spaceSize: 'small' | 'big';
@@ -384,7 +386,7 @@ const Index = () => {
         notes: preferences.notes,
       };
       
-      const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(aiRequest);
+      const newWorkout = await ClaudeWG.generateWorkout(aiRequest);
       
       // Navigate to workout plan page with the generated workout
       navigate('/workout-plan', { 

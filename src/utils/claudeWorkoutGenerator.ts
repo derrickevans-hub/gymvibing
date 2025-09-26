@@ -1,4 +1,5 @@
 import { Exercise, Workout } from '@/types/exercise';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EnhancedWorkoutPreferences {
   spaceSize: 'small' | 'big';
@@ -18,25 +19,21 @@ interface ClaudeWorkoutResponse {
 export class ClaudeWorkoutGenerator {
   static async generateWorkout(preferences: EnhancedWorkoutPreferences): Promise<Workout> {
     try {
-      const response = await fetch('/functions/v1/generate-workout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(preferences)
+      const { data, error } = await supabase.functions.invoke('generate-workout', {
+        body: preferences,
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (error) {
+        throw error;
       }
 
-      const data: ClaudeWorkoutResponse = await response.json();
+      const workoutData = data as ClaudeWorkoutResponse;
       
       return {
         id: Date.now().toString(),
-        exercises: data.exercises,
-        totalDuration: data.totalDuration,
-        estimatedCalories: data.estimatedCalories,
+        exercises: workoutData.exercises,
+        totalDuration: workoutData.totalDuration,
+        estimatedCalories: workoutData.estimatedCalories,
         preferences: {
           timeMinutes: preferences.duration <= 5 ? 5 : preferences.duration <= 10 ? 3 : 2,
           spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
