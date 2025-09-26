@@ -391,10 +391,12 @@ const Index = () => {
         state: { 
           workout: newWorkout, 
           preferences: {
-            timeMinutes: preferences.duration <= 5 ? 5 : preferences.duration <= 10 ? 3 : 2,
-            spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
-            energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'intense' ? 'high' : 'medium',
-            equipment: preferences.hasWeights ? 'chair' : 'none'
+            spaceSize: preferences.spaceSize,
+            hasWeights: preferences.hasWeights,
+            intensity: preferences.intensity,
+            duration: preferences.duration,
+            focusArea: preferences.focusArea,
+            notes: preferences.notes
           }
         } 
       });
