@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
-import { supabase } from '@/integrations/supabase/client';
 import WorkoutTimer from '@/components/WorkoutTimer';
 import { 
   Play,
@@ -54,9 +52,11 @@ interface AIWorkoutResponse {
 class ClaudeWorkoutGenerator {
   private static async callClaude(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
     // Check if we have the API key
-    // Use the Supabase edge function instead of trying to access process.env
-    // This method is no longer needed since we use the edge function
-    throw new Error('Use edge function instead');
+    const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      console.warn('No Anthropic API key found, using fallback workout');
+      return this.getFallbackWorkout(preferences);
+    }
 
     const notesSection = preferences.notes.trim() 
       ? `\n- Special considerations/injuries to avoid: ${preferences.notes}` 
@@ -104,7 +104,7 @@ Requirements:
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': 'not-used',
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
@@ -324,51 +324,22 @@ Requirements:
   }
 
   static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
-    try {
-      // Call the Supabase edge function
-      const { data, error } = await supabase.functions.invoke('generate-workout', {
-        body: {
-          spaceSize: preferences.spaceSize,
-          hasWeights: preferences.hasWeights,
-          intensity: preferences.intensity,
-          duration: preferences.duration,
-          focusArea: preferences.focusArea,
-          notes: preferences.notes
-        }
-      });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error('Failed to generate workout');
-      }
-
-      // Convert the response to our Workout format
-      return {
-        id: `workout-${Date.now()}`,
-        exercises: data.exercises.map((exercise: any, index: number) => ({
-          id: exercise.id || `exercise-${index + 1}`,
-          name: exercise.name,
-          duration: exercise.duration,
-          reps: exercise.reps,
-          sets: exercise.sets,
-          instructions: exercise.instructions,
-          formTips: exercise.formTips || ['Maintain proper form', 'Control the movement', 'Focus on quality over quantity'],
-          category: exercise.category || 'main',
-          restAfter: exercise.restAfter || 30
-        })),
-        totalDuration: data.totalDuration,
-        estimatedCalories: data.estimatedCalories || Math.round(preferences.duration * 8),
-        preferences: {
-          timeMinutes: preferences.duration as 2 | 3 | 5,
-          spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
-          energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'moderate' ? 'medium' : 'high',
-          equipment: preferences.hasWeights ? 'chair' : 'none'
-        }
-      };
-    } catch (error) {
-      console.error('Failed to generate workout:', error);
-      throw error;
-    }
+    const aiWorkout = await this.callClaudeViaSupabase(preferences);
+    
+    // Convert AI response to your app's Workout format
+    return {
+      exercises: aiWorkout.exercises.map(exercise => ({
+        name: exercise.name,
+        sets: exercise.sets,
+        reps: exercise.reps,
+        duration: exercise.duration,
+        instructions: exercise.instructions.join(' '),
+        restTime: exercise.restTime
+      })),
+      totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
+      warmupAdvice: aiWorkout.warmupAdvice,
+      cooldownAdvice: aiWorkout.cooldownAdvice
+    };
   }
 }
 
@@ -393,8 +364,7 @@ interface SavedWorkout {
 }
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout' | 'saved'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout-preview' | 'workout' | 'saved'>('home');
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
@@ -451,19 +421,17 @@ const Index = () => {
       };
       
       const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(aiRequest);
-      
-      // Navigate to the new workout plan page
-      navigate('/workout-plan', { 
-        state: { 
-          workout: newWorkout, 
-          preferences 
-        } 
-      });
+      setWorkout(newWorkout);
+      setCurrentView('workout-preview');
     } catch (error) {
       console.error('Failed to generate workout:', error);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const startWorkout = () => {
+    setCurrentView('workout');
   };
 
   const handleWorkoutComplete = () => {
@@ -532,14 +500,7 @@ const Index = () => {
     setSavedWorkouts(updatedSaved);
     localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
     
-    
-    // Navigate to the workout plan page
-    navigate('/workout-plan', { 
-      state: { 
-        workout: savedWorkout.workout, 
-        preferences: savedWorkout.preferences 
-      } 
-    });
+    setCurrentView('workout');
   };
 
   const deleteSavedWorkout = (workoutId: string) => {
@@ -564,15 +525,13 @@ const Index = () => {
     }
   };
 
-
   if (currentView === 'workout' && workout) {
     return (
       <WorkoutTimer
         exercises={workout.exercises}
         onComplete={handleWorkoutComplete}
         onExit={() => {
-          setCurrentView('home');
-          setWorkout(null);
+          setCurrentView('workout-preview');
           setQuestionStep(0);
         }}
         onSaveWorkout={saveCurrentWorkout}
