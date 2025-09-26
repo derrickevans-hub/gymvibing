@@ -151,12 +151,8 @@ const Home = () => {
             <h1 className="text-4xl md:text-5xl font-bold tracking-wider">GYMGUIDE AI</h1>
           </div>
           <div className="w-24 h-px bg-primary mx-auto mb-6"></div>
-          <p className="text-xl text-muted-foreground tracking-wide mb-4">
-            SMART WORKOUTS FOR REAL PEOPLE
-          </p>
-          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Generate personalized workouts powered by AI. Whether you have 5 minutes or an hour, 
-            whether you're at home or in the gym - we'll create the perfect routine for your vibe.
+          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed text-lg">
+            Your workout, your way. AI builds custom routines that fit your life - whether it's a 5-minute desk break or full gym session.
           </p>
         </div>
 
