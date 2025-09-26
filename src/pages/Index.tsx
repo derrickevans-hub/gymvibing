@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button-minimal';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
 import WorkoutTimer from '@/components/WorkoutTimer';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Play,
   ArrowLeft,
@@ -324,6 +326,8 @@ interface SavedWorkout {
 }
 
 const Index = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout-preview' | 'workout' | 'saved'>('home');
   const [questionStep, setQuestionStep] = useState(0);
   const [workout, setWorkout] = useState<Workout | null>(null);
@@ -381,10 +385,26 @@ const Index = () => {
       };
       
       const newWorkout = await ClaudeWorkoutGenerator.generateWorkout(aiRequest);
-      setWorkout(newWorkout);
-      setCurrentView('workout-preview');
+      
+      // Navigate to workout plan page with the generated workout
+      navigate('/workout-plan', { 
+        state: { 
+          workout: newWorkout, 
+          preferences: {
+            timeMinutes: preferences.duration <= 5 ? 5 : preferences.duration <= 10 ? 3 : 2,
+            spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
+            energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'intense' ? 'high' : 'medium',
+            equipment: preferences.hasWeights ? 'chair' : 'none'
+          }
+        } 
+      });
     } catch (error) {
       console.error('Failed to generate workout:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate workout. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsGenerating(false);
     }
