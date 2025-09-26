@@ -324,21 +324,30 @@ Requirements:
   }
 
   static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
-    const aiWorkout = await this.callClaudeViaSupabase(preferences);
+    const aiWorkout = await this.callClaude(preferences);
     
     // Convert AI response to your app's Workout format
     return {
+      id: Date.now().toString(),
       exercises: aiWorkout.exercises.map(exercise => ({
+        id: `${exercise.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`,
         name: exercise.name,
-        sets: exercise.sets,
-        reps: exercise.reps,
         duration: exercise.duration,
+        reps: typeof exercise.reps === 'string' ? parseInt(exercise.reps.split('-')[0]) : undefined,
+        sets: exercise.sets,
         instructions: exercise.instructions.join(' '),
-        restTime: exercise.restTime
+        formTips: exercise.instructions,
+        category: 'main' as const,
+        restAfter: exercise.restTime
       })),
       totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
-      warmupAdvice: aiWorkout.warmupAdvice,
-      cooldownAdvice: aiWorkout.cooldownAdvice
+      estimatedCalories: Math.round(aiWorkout.totalDuration * 8),
+      preferences: {
+        timeMinutes: preferences.duration <= 5 ? 5 : preferences.duration <= 10 ? 3 : 2,
+        spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
+        energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'intense' ? 'high' : 'medium',
+        equipment: preferences.hasWeights ? 'chair' : 'none'
+      }
     };
   }
 }
