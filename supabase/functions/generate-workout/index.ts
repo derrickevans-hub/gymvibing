@@ -92,6 +92,8 @@ Ensure:
 - Consider any limitations: ${notes}
 - Include proper progression from warmup → main → cooldown`;
 
+    console.log('Calling Anthropic API with preferences:', { spaceSize, hasWeights, intensity, duration, focusArea, notes });
+    
     const message = await anthropic.messages.create({
       model: "claude-3-5-sonnet-20241022",
       max_tokens: 2000,
@@ -102,6 +104,8 @@ Ensure:
         }
       ]
     });
+    
+    console.log('Anthropic API response received');
 
     // Extract text content from Claude's response
     const textContent = message.content.find(block => block.type === 'text');
