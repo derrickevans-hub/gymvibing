@@ -148,11 +148,11 @@ const Home = () => {
             <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
               <Dumbbell className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-wider">VIBE GYMING</h1>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-wider">GYMGUIDE AI</h1>
           </div>
           <div className="w-24 h-px bg-primary mx-auto mb-6"></div>
           <p className="text-xl text-muted-foreground tracking-wide mb-4">
-            WORKOUTS THAT MATCH YOUR ENERGY
+            SMART WORKOUTS FOR REAL PEOPLE
           </p>
           <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Generate personalized workouts powered by AI. Whether you have 5 minutes or an hour, 
