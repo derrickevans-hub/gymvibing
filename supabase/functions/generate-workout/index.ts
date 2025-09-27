@@ -39,29 +39,186 @@ serve(async (req) => {
 
     const { spaceSize, hasWeights, intensity, duration, focusArea, notes }: WorkoutRequest = await req.json();
 
-    const prompt = `Create a personalized ${duration}-minute workout plan with the following specifications:
+    const prompt = `You are an expert personal trainer with 15+ years of experience specializing in adaptive fitness, injury prevention, and personalized program design. Your mission is to analyze every detail of this user's profile and create a completely customized ${duration}-minute workout that is safe, effective, and perfectly suited to their unique situation.
 
-WORKOUT REQUIREMENTS:
-- Space: ${spaceSize} space ${spaceSize === 'small' ? '(apartment/office)' : '(gym/large room)'}
+## USER PROFILE ANALYSIS
+
+**SPACE CONSTRAINTS:**
+- Space: ${spaceSize} space
+${spaceSize === 'small' ? `
+  ⚠️ SMALL SPACE PROTOCOL ACTIVE:
+  - NO jumping, hopping, or lateral movements
+  - NO exercises requiring more than 6 feet of space
+  - PRIORITIZE: Wall-supported moves, seated/lying exercises, stationary movements
+  - FOCUS ON: Isometric holds, controlled movements, vertical exercises
+` : `
+  ✅ LARGE SPACE AVAILABLE:
+  - Full dynamic movements permitted
+  - Jumping, plyometrics, and lateral movements allowed
+  - Multi-directional exercises encouraged
+  - Explosive and traveling movements permitted
+`}
+
+**EQUIPMENT ASSESSMENT:**
 - Equipment: ${hasWeights ? 'Weights available' : 'Bodyweight only'}
-- Intensity: ${intensity}
-- Focus: ${focusArea}
-- Duration: ${duration} minutes
-- Special notes: ${notes || 'None'}
+${hasWeights ? `
+  🏋️ HYBRID TRAINING APPROACH:
+  - Create progressive loading schemes
+  - Combine weighted and bodyweight movements
+  - Use weights for strength, bodyweight for conditioning
+  - Include compound movements with resistance
+` : `
+  💪 OPTIMIZED CALISTHENICS:
+  - Focus on movement quality and progression
+  - Use leverage and tempo for intensity
+  - Emphasize unilateral training
+  - Include isometric challenges
+`}
 
-STRUCTURE REQUIRED:
-1. Warmup (3-5 exercises, 5-8 minutes)
-2. Main workout (4-6 exercises, ${duration - 12}-${duration - 8} minutes)
-3. Cooldown (2-4 exercises, 3-5 minutes)
+**INTENSITY MAPPING:**
+- Target Intensity: ${intensity}
+${intensity === 'light' ? `
+  🌅 RECOVERY & ACTIVATION FOCUS:
+  - Longer rest periods (45-90 seconds)
+  - Gentle, flowing movements
+  - Emphasis on mobility and activation
+  - Heart rate: 50-65% max
+  - Include breathing exercises and stretches
+` : intensity === 'moderate' ? `
+  ⚡ STEADY CHALLENGE PROTOCOL:
+  - Moderate rest periods (30-60 seconds)
+  - Balanced strength and cardio
+  - Progressive difficulty
+  - Heart rate: 65-80% max
+  - Sustainable pace throughout
+` : `
+  🔥 HIGH INTENSITY PROTOCOL:
+  - Short rest periods (15-45 seconds)
+  - Compound, multi-joint movements
+  - Elevated heart rate maintenance
+  - Heart rate: 80-90% max
+  - Maximum effort phases
+`}
 
-For each exercise, provide:
-- Name (clear, descriptive)
-- Duration (in seconds) OR reps/sets
-- Detailed instructions (2-3 sentences)
-- Form tips (3-4 bullet points for proper technique)
-- Rest time after exercise (in seconds)
+**FOCUS AREA EXPERTISE:**
+- Primary Focus: ${focusArea}
+${focusArea === 'upper-body' ? `
+  🎯 UPPER BODY SPECIALIZATION:
+  - Balance push/pull movements (1:1 ratio)
+  - Include horizontal and vertical planes
+  - Target all major muscle groups: chest, back, shoulders, arms
+  - Emphasize posterior chain strengthening
+` : focusArea === 'lower-body' ? `
+  🎯 LOWER BODY SPECIALIZATION:
+  - Emphasize unilateral (single-leg) work
+  - Include all movement patterns: squat, hinge, lunge, step
+  - Target glutes, quads, hamstrings, calves
+  - Balance stability and power
+` : focusArea === 'core' ? `
+  🎯 CORE SPECIALIZATION:
+  - Train all movement planes: sagittal, frontal, transverse
+  - Include anti-extension, anti-flexion, anti-rotation
+  - Progress from stable to unstable positions
+  - Integrate core with full-body movements
+` : focusArea === 'cardio' ? `
+  🎯 CARDIOVASCULAR SPECIALIZATION:
+  - Prioritize heart rate elevation and maintenance
+  - Include interval training principles
+  - Mix steady-state and high-intensity periods
+  - Focus on metabolic conditioning
+` : focusArea === 'mobility' ? `
+  🎯 MOBILITY SPECIALIZATION:
+  - Prioritize range of motion improvements
+  - Include dynamic and static stretching
+  - Target major joints and movement patterns
+  - Emphasize controlled articular rotations
+` : `
+  🎯 FULL-BODY INTEGRATION:
+  - Balance all movement patterns
+  - Include upper, lower, and core integration
+  - Vary movement planes and intensities
+  - Create systemic training effect
+`}
 
-Return ONLY a valid JSON object in this exact format:
+## INJURY INTELLIGENCE & SAFETY PROTOCOLS
+
+**USER NOTES ANALYSIS:** "${notes || 'No specific limitations mentioned'}"
+
+${notes ? `
+⚠️ INJURY RISK ASSESSMENT ACTIVE:
+- SCAN for keywords: back pain, knee issues, shoulder problems, neck pain, wrist pain, ankle issues, recent injury, surgery, arthritis, pregnancy, beginner, elderly
+- If ANY injury keywords detected: AUTOMATICALLY exclude contraindicated exercises
+- PRIORITIZE: Joint-friendly alternatives, supported movements, pain-free ranges
+- INCLUDE: Specific form cues for injury prevention and modifications
+- EMPHASIZE: "Stop if pain occurs" messaging in instructions
+` : `
+✅ NO SPECIFIC LIMITATIONS NOTED:
+- Proceed with standard exercise selection
+- Include general injury prevention form cues
+- Maintain conservative progression for unknown fitness level
+`}
+
+## CONTEXTUAL WORKOUT ARCHITECTURE
+
+**DURATION-BASED STRUCTURE:**
+${duration <= 10 ? `
+⏰ QUICK SESSION (${duration} min):
+- Warmup: 2-3 exercises (2-3 minutes)
+- Main: 2-4 exercises (${duration - 5}-${duration - 4} minutes)
+- Cooldown: 1-2 exercises (1-2 minutes)
+- FOCUS: High-impact movements, efficient compound exercises
+` : duration <= 30 ? `
+⏰ STANDARD SESSION (${duration} min):
+- Warmup: 3-4 exercises (5-7 minutes)
+- Main: 4-6 exercises (${duration - 12}-${duration - 8} minutes)
+- Cooldown: 2-3 exercises (3-5 minutes)
+- FOCUS: Balanced progression with adequate preparation
+` : `
+⏰ EXTENDED SESSION (${duration} min):
+- Warmup: 4-5 exercises (8-10 minutes)
+- Main: 6-8 exercises (${duration - 18}-${duration - 15} minutes)
+- Cooldown: 3-4 exercises (5-8 minutes)
+- FOCUS: Comprehensive training with full progression
+`}
+
+## EXERCISE SELECTION INTELLIGENCE
+
+**WARMUP REQUIREMENTS:**
+- Start with gentle mobility and activation
+- Progress from small to large movements
+- Include joint rotations and dynamic stretches
+- Prepare specific areas for the main workout focus
+- Match the intensity of upcoming exercises
+
+**MAIN WORKOUT REQUIREMENTS:**
+- Select exercises that honor ALL user constraints
+- Create logical progression in difficulty
+- Include the specified focus area as 60-70% of exercises
+- Balance muscle groups and movement patterns
+- Ensure exercises flow well together
+
+**COOLDOWN REQUIREMENTS:**
+- Gradually lower heart rate and intensity
+- Include static stretches for worked muscles
+- Promote recovery and flexibility
+- End with calming, restorative movements
+
+## PERSONALIZATION DEPTH
+
+**EXPERIENCE ADAPTATION:**
+- If "beginner" mentioned: Emphasize basic movements with extra detailed instructions
+- If advanced terms used: Include more complex movement patterns
+- Default: Assume intermediate level with clear, comprehensive instructions
+
+**BREATHING & RECOVERY INTEGRATION:**
+- Include breathing cues in high-intensity portions
+- Specify rest periods based on intensity level
+- Add recovery tips between challenging exercises
+- Integrate mindfulness cues for cooldown
+
+## CRITICAL OUTPUT REQUIREMENTS
+
+Return ONLY a valid JSON object in this EXACT format:
 {
   "exercises": [
     {
@@ -70,11 +227,12 @@ Return ONLY a valid JSON object in this exact format:
       "duration": 45,
       "reps": null,
       "sets": null,
-      "instructions": "Clear step-by-step instructions for the exercise.",
+      "instructions": "Comprehensive step-by-step instructions adapted to user's profile and limitations.",
       "formTips": [
-        "Keep your core engaged",
-        "Maintain proper posture",
-        "Control the movement"
+        "Safety-first form cue specific to user constraints",
+        "Performance optimization tip",
+        "Injury prevention guidance",
+        "Breathing or tempo instruction"
       ],
       "category": "warmup",
       "restAfter": 15
@@ -84,13 +242,20 @@ Return ONLY a valid JSON object in this exact format:
   "estimatedCalories": 150
 }
 
-Ensure:
-- Total workout time matches ${duration} minutes
-- Exercise difficulty matches ${intensity} intensity
-- All exercises work for ${spaceSize} space
-- ${hasWeights ? 'Include weight exercises' : 'Only bodyweight exercises'}
-- Consider any limitations: ${notes}
-- Include proper progression from warmup → main → cooldown`;
+## FINAL VALIDATION CHECKLIST
+
+Before generating, verify:
+✅ Every exercise respects space constraints (${spaceSize} space)
+✅ Equipment usage matches availability (${hasWeights ? 'weights included' : 'bodyweight only'})
+✅ Intensity level appropriate (${intensity})
+✅ Focus area emphasized (${focusArea})
+✅ User limitations addressed (${notes || 'none specified'})
+✅ Exercise progression flows logically
+✅ Form tips include safety and performance elements
+✅ Total duration matches ${duration} minutes exactly
+✅ Rest periods appropriate for intensity level
+
+Remember: This user's unique combination of factors should produce a fundamentally different workout than any other user. Analyze every detail and create something truly personalized.`;
 
     console.log('Calling Anthropic API with preferences:', { spaceSize, hasWeights, intensity, duration, focusArea, notes });
     
