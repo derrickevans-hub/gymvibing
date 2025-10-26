@@ -2,6 +2,3 @@ project_id = "gfaorzadtmwcoyofxhvu"
 
 [functions.generate-workout]
 verify_jwt = false
-
-[functions.import-exercises]
-verify_jwt = false
