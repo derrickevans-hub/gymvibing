@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, UserPlus, LogIn, Dumbbell, Zap, Clock, MapPin } from 'lucide-react';
+import { Eye, EyeOff, Dumbbell } from 'lucide-react';
 import { z } from 'zod';
 
 const authSchema = z.object({
@@ -19,11 +21,11 @@ const Home = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Check if user is already authenticated
     const checkAuth = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -33,13 +35,11 @@ const Home = () => {
 
     checkAuth();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
           navigate('/dashboard');
         }
-        setUser(session?.user ?? null);
       }
     );
 
@@ -139,204 +139,160 @@ const Home = () => {
     }
   };
 
-  const handleAppleSignIn = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "Apple Sign In Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Apple Sign In Error",
-        description: error.message || "An unexpected error occurred.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background text-foreground font-mono">
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-wider">GYMGUIDE AI</h1>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Decorative Header */}
+        <div className="text-center space-y-6">
+          {/* Logo */}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4 transition-transform hover:scale-105">
+            <Dumbbell className="w-8 h-8 text-primary" />
           </div>
-          <div className="w-24 h-px bg-primary mx-auto mb-6"></div>
-          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed text-lg">
-            Your workout, your way. AI builds custom routines that fit your life - whether it's a 5-minute desk break or full gym session.
-          </p>
-        </div>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <div className="text-center p-6 border border-border rounded-lg bg-card">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-6 h-6 text-primary" />
+          {/* Geometric Decoration */}
+          <div className="relative h-32 mb-8">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="grid grid-cols-6 gap-2 w-full max-w-xs opacity-20">
+                {Array.from({ length: 18 }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`aspect-square rounded-sm transition-all duration-500 ${
+                      i === 7 ? 'bg-primary' : 
+                      i === 10 ? 'bg-accent' : 
+                      i === 15 ? 'bg-warning' : 
+                      'bg-muted-foreground/20'
+                    }`}
+                    style={{
+                      animationDelay: `${i * 0.1}s`
+                    }}
+                  />
+                ))}
+              </div>
             </div>
-            <h3 className="font-bold tracking-wider mb-2">AI-POWERED</h3>
-            <p className="text-sm text-muted-foreground">
-              Advanced AI creates workouts tailored to your space, equipment, and energy level
-            </p>
-          </div>
-          
-          <div className="text-center p-6 border border-border rounded-lg bg-card">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <Clock className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-bold tracking-wider mb-2">ANY DURATION</h3>
-            <p className="text-sm text-muted-foreground">
-              From quick 5-minute sessions to full hour workouts - we adapt to your schedule
-            </p>
-          </div>
-          
-          <div className="text-center p-6 border border-border rounded-lg bg-card">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <MapPin className="w-6 h-6 text-primary" />
-            </div>
-            <h3 className="font-bold tracking-wider mb-2">ANY SPACE</h3>
-            <p className="text-sm text-muted-foreground">
-              Hotel room, office, gym, or backyard - workouts designed for your available space
-            </p>
           </div>
         </div>
 
         {/* Auth Card */}
-        <div className="max-w-md mx-auto">
-          <Card className="p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold tracking-wider mb-2">
-                {isSignUp ? 'CREATE ACCOUNT' : 'SIGN IN'}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {isSignUp 
-                  ? 'Join thousands of people getting fit with AI' 
-                  : 'Welcome back to your fitness journey'
-                }
-              </p>
+        <Card className="p-8 space-y-6">
+          <form onSubmit={handleAuth} className="space-y-5">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <Input
+                type="email"
+                placeholder="email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                maxLength={255}
+                className="transition-all"
+              />
             </div>
 
-            <form onSubmit={handleAuth} className="space-y-6">
-              <div className="space-y-2">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                    required
-                    maxLength={255}
-                  />
-                </div>
-              </div>
+            {/* Password Input */}
+            <div className="space-y-2 relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                maxLength={100}
+                className="pr-12 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
 
-              <div className="space-y-2">
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                    minLength={6}
-                    maxLength={100}
+            {/* Remember Me & Forgot Password */}
+            {!isSignUp && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="remember" 
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                   />
+                  <Label 
+                    htmlFor="remember" 
+                    className="cursor-pointer select-none text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Save Login Info
+                  </Label>
                 </div>
-                {isSignUp && (
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least 6 characters long
-                  </p>
-                )}
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Forgot password
+                </button>
               </div>
+            )}
 
+            {/* Submit Buttons */}
+            <div className="flex items-center gap-3 pt-2">
               <Button
                 type="submit"
-                className="w-full py-3 text-lg font-bold tracking-wider"
+                className="flex-1 font-semibold tracking-wide"
                 disabled={loading}
               >
-                {loading ? (
-                  'Loading...'
-                ) : isSignUp ? (
-                  <>
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    CREATE ACCOUNT
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-5 h-5 mr-2" />
-                    SIGN IN
-                  </>
-                )}
+                {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Login'}
               </Button>
+              
+              {!isSignUp && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="w-14 h-12"
+                  title="Face ID"
+                >
+                  <svg 
+                    className="w-5 h-5" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                    <line x1="15" y1="9" x2="15.01" y2="9"/>
+                  </svg>
+                </Button>
+              )}
+            </div>
 
-              <div className="flex items-center gap-4 my-6">
-                <div className="flex-1 h-px bg-border"></div>
-                <span className="text-xs text-muted-foreground font-medium">OR</span>
-                <div className="flex-1 h-px bg-border"></div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full py-3 text-lg font-bold tracking-wider bg-black text-white border-black hover:bg-gray-800"
-                onClick={handleAppleSignIn}
-                disabled={loading}
-              >
-                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                Continue with Apple
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full py-3 text-sm font-medium tracking-wider"
-                onClick={() => navigate('/dashboard')}
-              >
-                SKIP FOR TESTING
-              </Button>
-            </form>
-
-            <div className="text-center mt-6">
+            {/* Toggle Sign In/Sign Up */}
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">
+                {isSignUp ? 'Already have an account? ' : 'New to GymGuide? '}
+              </span>
               <button
                 type="button"
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
+                className="text-foreground font-medium hover:text-primary transition-colors underline-offset-2 hover:underline"
               >
-                {isSignUp
-                  ? 'Already have an account? Sign in'
-                  : "Don't have an account? Sign up"
-                }
+                {isSignUp ? 'Sign In' : 'Sign Up'}
               </button>
             </div>
-          </Card>
-        </div>
 
-        {/* Footer */}
-        <div className="text-center mt-16 text-muted-foreground text-xs">
-          <p>Start your personalized fitness journey today</p>
-        </div>
+            {/* Test Skip Button */}
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full text-xs text-muted-foreground"
+              onClick={() => navigate('/dashboard')}
+            >
+              Skip for testing
+            </Button>
+          </form>
+        </Card>
       </div>
     </div>
   );
