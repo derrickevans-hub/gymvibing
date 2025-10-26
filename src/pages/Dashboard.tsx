@@ -20,7 +20,8 @@ import {
   Bookmark,
   X,
   Loader2,
-  LogOut
+  LogOut,
+  Download
 } from 'lucide-react';
 
 import { ClaudeWorkoutGenerator as ClaudeWG } from '@/utils/claudeWorkoutGenerator';
@@ -53,6 +54,7 @@ const Dashboard = () => {
   const [workout, setWorkout] = useState<Workout | null>(null);
   const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userStats, setUserStats] = useState<UserStats>({
     streak: 0,
@@ -268,6 +270,29 @@ const Dashboard = () => {
       setSavedWorkouts(updatedSaved);
     } catch (error) {
       console.error('Error deleting saved workout:', error);
+    }
+  };
+
+  const importExercises = async () => {
+    setIsImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('import-exercises');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Import complete!",
+        description: `Successfully imported ${data.imported} exercises`,
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import failed",
+        description: "Failed to import exercises. Check console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -617,7 +642,14 @@ const Dashboard = () => {
         {/* Header */}
         <div className="mb-16 text-center">
           <div className="flex items-center justify-between mb-6">
-            <div></div>
+            <button
+              onClick={importExercises}
+              disabled={isImporting}
+              className="p-2 hover:bg-muted rounded transition-colors disabled:opacity-50"
+              title="Import exercises from CSV (Dev only)"
+            >
+              {isImporting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+            </button>
             <h1 className="text-4xl font-bold tracking-wider">VIBE GYMING</h1>
             <button
               onClick={signOut}
