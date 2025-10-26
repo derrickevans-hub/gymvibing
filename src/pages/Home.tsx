@@ -307,6 +307,15 @@ const Home = () => {
                 </svg>
                 Continue with Apple
               </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full py-3 text-sm font-medium tracking-wider"
+                onClick={() => navigate('/dashboard')}
+              >
+                SKIP FOR TESTING
+              </Button>
             </form>
 
             <div className="text-center mt-6">

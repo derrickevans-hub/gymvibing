@@ -91,7 +91,7 @@ const Dashboard = () => {
           loadSavedWorkouts();
         } else {
           setSavedWorkouts([]);
-          navigate('/');
+          // Removed redirect to allow guest access for testing
         }
       }
     );
@@ -104,9 +104,8 @@ const Dashboard = () => {
     setUser(user);
     if (user) {
       loadSavedWorkouts();
-    } else {
-      navigate('/');
     }
+    // Removed redirect to allow guest access for testing
   };
 
   const loadSavedWorkouts = async () => {
