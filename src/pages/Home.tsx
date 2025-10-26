@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Dumbbell } from 'lucide-react';
 import { z } from 'zod';
+import ExerciseAnimation from '@/components/ExerciseAnimation';
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255, { message: "Email must be less than 255 characters" }),
@@ -149,26 +150,9 @@ const Home = () => {
             <Dumbbell className="w-8 h-8 text-primary" />
           </div>
 
-          {/* Geometric Decoration */}
-          <div className="relative h-32 mb-8">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="grid grid-cols-6 gap-2 w-full max-w-xs opacity-20">
-                {Array.from({ length: 18 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className={`aspect-square rounded-sm transition-all duration-500 ${
-                      i === 7 ? 'bg-primary' : 
-                      i === 10 ? 'bg-accent' : 
-                      i === 15 ? 'bg-warning' : 
-                      'bg-muted-foreground/20'
-                    }`}
-                    style={{
-                      animationDelay: `${i * 0.1}s`
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+          {/* Exercise Animation */}
+          <div className="mb-8">
+            <ExerciseAnimation />
           </div>
         </div>
 
