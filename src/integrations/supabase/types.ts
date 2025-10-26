@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      exercises: {
+        Row: {
+          body_part: string
+          category: string | null
+          created_at: string | null
+          difficulty: number | null
+          duration: number | null
+          energy_level: string | null
+          equipment: string
+          form_tips: Json | null
+          id: string
+          instructions: string | null
+          name: string
+          reps: number | null
+          rest_after: number | null
+          sets: number | null
+          space_requirement: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          body_part: string
+          category?: string | null
+          created_at?: string | null
+          difficulty?: number | null
+          duration?: number | null
+          energy_level?: string | null
+          equipment: string
+          form_tips?: Json | null
+          id?: string
+          instructions?: string | null
+          name: string
+          reps?: number | null
+          rest_after?: number | null
+          sets?: number | null
+          space_requirement?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          body_part?: string
+          category?: string | null
+          created_at?: string | null
+          difficulty?: number | null
+          duration?: number | null
+          energy_level?: string | null
+          equipment?: string
+          form_tips?: Json | null
+          id?: string
+          instructions?: string | null
+          name?: string
+          reps?: number | null
+          rest_after?: number | null
+          sets?: number | null
+          space_requirement?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       saved_workouts: {
         Row: {
           created_at: string
