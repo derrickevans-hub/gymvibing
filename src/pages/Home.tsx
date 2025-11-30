@@ -249,7 +249,7 @@ const Home = () => {
             {/* Toggle Sign In/Sign Up */}
             <div className="text-center text-sm">
               <span className="text-muted-foreground">
-                {isSignUp ? 'Already have an account? ' : 'New to GymGuide? '}
+                {isSignUp ? 'Already have an account? ' : 'New to Jym.ai? '}
               </span>
               <button
                 type="button"
