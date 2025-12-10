@@ -284,9 +284,11 @@ const Dashboard = () => {
     });
   };
 
-  const nextQuestion = async () => {
+  const nextQuestion = async (selectedValue?: string) => {
     // If we're on Workout Type (step 4) and cardio is selected, skip Focus Area (step 5)
-    if (questionStep === 4 && workoutType === 'cardio') {
+    // Use selectedValue if provided (for immediate selection), otherwise use state
+    const isCardio = selectedValue === 'cardio' || (questionStep === 4 && workoutType === 'cardio');
+    if (questionStep === 4 && isCardio) {
       setQuestionStep(6); // Skip to Notes
     } else if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
@@ -383,7 +385,8 @@ const Dashboard = () => {
           { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
         ],
         currentValue: workoutType,
-        onChange: (value: string) => setWorkoutType(value as 'cardio' | 'functional' | 'mobility')
+        onChange: (value: string) => setWorkoutType(value as 'cardio' | 'functional' | 'mobility'),
+        isWorkoutType: true
       },
       // Question 6: Focus Area - Body Parts (skipped if cardio)
       {
@@ -500,7 +503,8 @@ const Dashboard = () => {
                   key={index}
                   onClick={() => {
                     currentQuestion.onChange(option.key);
-                    setTimeout(nextQuestion, 150);
+                    // Pass the selected value to nextQuestion for workout type to handle cardio skip
+                    setTimeout(() => nextQuestion((currentQuestion as any).isWorkoutType ? option.key : undefined), 150);
                   }}
                   disabled={isGenerating}
                   className={`w-full p-4 border rounded-lg transition-all duration-200 text-left disabled:opacity-50 ${
@@ -527,7 +531,7 @@ const Dashboard = () => {
           {/* Continue button for text area */}
           {currentQuestion.isTextArea && (
             <button
-              onClick={nextQuestion}
+              onClick={() => nextQuestion()}
               disabled={isGenerating}
               className="w-full py-4 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
             >
