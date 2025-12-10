@@ -285,10 +285,9 @@ const Dashboard = () => {
   };
 
   const nextQuestion = async (selectedValue?: string) => {
-    // If we're on Workout Type (step 4) and cardio is selected, skip Focus Area (step 5)
-    // Use selectedValue if provided (for immediate selection), otherwise use state
-    const isCardio = selectedValue === 'cardio' || (questionStep === 4 && workoutType === 'cardio');
-    if (questionStep === 4 && isCardio) {
+    // If we're on Workout Type (step 4), check if cardio is selected to skip Focus Area
+    // Only use selectedValue when on step 4 (workout type selection)
+    if (questionStep === 4 && selectedValue === 'cardio') {
       setQuestionStep(6); // Skip to Notes
     } else if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
@@ -298,13 +297,9 @@ const Dashboard = () => {
   };
 
   const prevQuestion = () => {
-    // If cardio is selected, skip Focus Area (step 5) when navigating back
+    // Only skip Focus Area (step 5) when going back if cardio is CURRENTLY selected
     if (questionStep === 6 && workoutType === 'cardio') {
-      // From Notes, go back to Workout Type (skip Focus Area)
-      setQuestionStep(4);
-    } else if (questionStep === 5 && workoutType === 'cardio') {
-      // Safety: if somehow on Focus Area with cardio, go to Workout Type
-      setQuestionStep(4);
+      setQuestionStep(4); // From Notes, go back to Workout Type
     } else if (questionStep > 0) {
       setQuestionStep(questionStep - 1);
     } else {
