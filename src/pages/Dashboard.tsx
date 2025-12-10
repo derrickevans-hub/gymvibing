@@ -72,6 +72,7 @@ const Dashboard = () => {
     focusArea: 'full-body',
     notes: '',
   });
+  const [workoutType, setWorkoutType] = useState<'cardio' | 'functional' | 'mobility'>('functional');
 
   // Load user stats and saved workouts from localStorage and database
   useEffect(() => {
@@ -285,7 +286,7 @@ const Dashboard = () => {
 
   const nextQuestion = async () => {
     // If we're on Workout Type (step 4) and cardio is selected, skip Focus Area (step 5)
-    if (questionStep === 4 && preferences.focusArea === 'cardio') {
+    if (questionStep === 4 && workoutType === 'cardio') {
       setQuestionStep(6); // Skip to Notes
     } else if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
@@ -296,7 +297,7 @@ const Dashboard = () => {
 
   const prevQuestion = () => {
     // If we're on Notes (step 6) and cardio is selected, go back to Workout Type (step 4)
-    if (questionStep === 6 && preferences.focusArea === 'cardio') {
+    if (questionStep === 6 && workoutType === 'cardio') {
       setQuestionStep(4);
     } else if (questionStep > 0) {
       setQuestionStep(questionStep - 1);
@@ -381,8 +382,8 @@ const Dashboard = () => {
           { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
           { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
         ],
-        currentValue: ['cardio', 'functional', 'mobility'].includes(preferences.focusArea) ? preferences.focusArea : '',
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+        currentValue: workoutType,
+        onChange: (value: string) => setWorkoutType(value as 'cardio' | 'functional' | 'mobility')
       },
       // Question 6: Focus Area - Body Parts (skipped if cardio)
       {
