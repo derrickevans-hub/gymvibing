@@ -284,7 +284,10 @@ const Dashboard = () => {
   };
 
   const nextQuestion = async () => {
-    if (questionStep < 6) {
+    // If we're on Workout Type (step 4) and cardio is selected, skip Focus Area (step 5)
+    if (questionStep === 4 && preferences.focusArea === 'cardio') {
+      setQuestionStep(6); // Skip to Notes
+    } else if (questionStep < 6) {
       setQuestionStep(questionStep + 1);
     } else {
       await generateWorkout();
@@ -292,7 +295,10 @@ const Dashboard = () => {
   };
 
   const prevQuestion = () => {
-    if (questionStep > 0) {
+    // If we're on Notes (step 6) and cardio is selected, go back to Workout Type (step 4)
+    if (questionStep === 6 && preferences.focusArea === 'cardio') {
+      setQuestionStep(4);
+    } else if (questionStep > 0) {
       setQuestionStep(questionStep - 1);
     } else {
       setCurrentView('home');
@@ -365,7 +371,20 @@ const Dashboard = () => {
         },
         isSelect: true
       },
-      // Question 5: Focus Area - Body Parts
+      // Question 5: Workout Type (moved before Focus Area)
+      {
+        title: "WORKOUT TYPE",
+        subtitle: "What style of training?",
+        icon: <Activity className="w-6 h-6" />,
+        options: [
+          { key: 'cardio', label: 'CARDIO', description: 'Heart rate, endurance' },
+          { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
+          { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
+        ],
+        currentValue: ['cardio', 'functional', 'mobility'].includes(preferences.focusArea) ? preferences.focusArea : '',
+        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
+      },
+      // Question 6: Focus Area - Body Parts (skipped if cardio)
       {
         title: "FOCUS AREA",
         subtitle: "What do you want to target?",
@@ -376,20 +395,7 @@ const Dashboard = () => {
           { key: 'core', label: 'CORE', description: 'Abs, obliques, lower back' },
           { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
         ],
-        currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
-      },
-      // Question 6: Workout Type
-      {
-        title: "WORKOUT TYPE",
-        subtitle: "What style of training?",
-        icon: <Activity className="w-6 h-6" />,
-        options: [
-          { key: 'cardio', label: 'CARDIO', description: 'Heart rate, endurance' },
-          { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
-          { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
-        ],
-        currentValue: preferences.focusArea,
+        currentValue: ['upper-body', 'lower-body', 'core', 'full-body'].includes(preferences.focusArea) ? preferences.focusArea : '',
         onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
       },
       // Question 7: Notes
