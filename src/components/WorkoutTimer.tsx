@@ -68,22 +68,22 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
   // Complete screen
   if (currentPhase === 'complete') {
     return (
-      <div className="min-h-screen bg-black text-white font-mono flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground font-mono flex items-center justify-center">
         <div className="max-w-md mx-auto px-6 text-center">
           <div className="text-6xl mb-8">🎉</div>
           <h1 className="text-2xl font-bold tracking-wider mb-4">WORKOUT COMPLETE!</h1>
-          <p className="text-white/60 text-sm mb-12">Great job finishing your workout session</p>
+          <p className="text-muted-foreground text-sm mb-12">Great job finishing your workout session</p>
           
           <div className="space-y-4">
             <button
               onClick={onComplete}
-              className="w-full py-3 bg-white text-black font-bold text-sm tracking-wider rounded-lg hover:bg-white/90 transition-colors"
+              className="w-full py-3 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
             >
               CONTINUE
             </button>
             <button
               onClick={onExit}
-              className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+              className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted/30 transition-colors font-bold tracking-wider"
             >
               BACK TO HOME
             </button>
@@ -96,15 +96,15 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
   // Rest screen
   if (currentPhase === 'rest') {
     return (
-      <div className="min-h-screen bg-black text-white font-mono">
+      <div className="min-h-screen bg-background text-foreground font-mono">
         <div className="max-w-md mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
-            <button onClick={onExit} className="p-2 hover:bg-white/10 rounded transition-colors">
+            <button onClick={onExit} className="p-2 hover:bg-muted/50 rounded transition-colors">
               <X className="w-5 h-5" />
             </button>
             <div className="text-center">
               <div className="text-sm font-medium">{currentExerciseIndex + 1} / {exercises.length}</div>
-              <div className="text-xs text-white/60 uppercase tracking-wider">REST</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">REST</div>
             </div>
             <div className="w-9 h-9"></div>
           </div>
@@ -113,13 +113,13 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
             <h1 className="text-2xl font-bold tracking-wider mb-8">TAKE A BREAK</h1>
             <div className="text-6xl font-bold mb-8">{formatTime(timeLeft)}</div>
             
-            <div className="text-sm text-white/60 mb-8">
+            <div className="text-sm text-muted-foreground mb-8">
               Next: {exercises[currentExerciseIndex + 1]?.name || 'Finish'}
             </div>
 
             <button
               onClick={handleNext}
-              className="w-full py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+              className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted/30 transition-colors font-bold tracking-wider"
             >
               SKIP REST
             </button>
@@ -135,13 +135,13 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
     const progress = ((currentExerciseIndex + 1) / exercises.length) * 100;
 
     return (
-      <div className="min-h-screen bg-black text-white font-mono">
+      <div className="min-h-screen bg-background text-foreground font-mono">
         <div className="max-w-md mx-auto px-6 py-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <button 
               onClick={onExit}
-              className="p-2 hover:bg-white/10 rounded transition-colors"
+              className="p-2 hover:bg-muted/50 rounded transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -150,23 +150,23 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
               <div className="text-sm font-medium">
                 {currentExerciseIndex + 1} / {exercises.length}
               </div>
-              <div className="text-xs text-white/60 uppercase tracking-wider">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">
                 {exercise.category}
               </div>
             </div>
 
             <button 
               onClick={onSaveWorkout}
-              className="p-2 hover:bg-white/10 rounded transition-colors"
+              className="p-2 hover:bg-muted/50 rounded transition-colors"
             >
               <Bookmark className="w-5 h-5" />
             </button>
           </div>
 
           {/* Progress bar */}
-          <div className="w-full bg-white/20 h-1 rounded mb-8">
+          <div className="w-full bg-muted h-1 rounded mb-8">
             <div 
-              className="bg-white h-1 rounded transition-all duration-300"
+              className="bg-primary h-1 rounded transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -180,17 +180,17 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold tracking-wider mb-4">{exercise.name}</h1>
             
-            <div className="text-sm text-white/80 mb-6 leading-relaxed">
+            <div className="text-sm text-muted-foreground mb-6 leading-relaxed">
               {exercise.instructions}
             </div>
 
             {/* Form tips */}
-            <div className="text-left bg-white/5 rounded-lg p-4 mb-6">
-              <div className="text-xs font-bold text-white/70 mb-3 tracking-wider">FORM TIPS</div>
+            <div className="text-left bg-muted/30 rounded-lg p-4 mb-6">
+              <div className="text-xs font-bold text-muted-foreground mb-3 tracking-wider">FORM TIPS</div>
               <ul className="space-y-2">
                 {exercise.formTips.map((tip, index) => (
-                  <li key={index} className="text-xs text-white/60 flex items-start gap-2">
-                    <span className="text-white/40 mt-1">•</span>
+                  <li key={index} className="text-xs text-muted-foreground flex items-start gap-2">
+                    <span className="text-muted-foreground/60 mt-1">•</span>
                     <span>{tip}</span>
                   </li>
                 ))}
@@ -201,7 +201,7 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
             <div className="text-6xl font-bold mb-2">{formatTime(timeLeft)}</div>
             
             {exercise.reps && (
-              <div className="text-sm text-white/60 mb-6">
+              <div className="text-sm text-muted-foreground mb-6">
                 Target: {exercise.reps} reps
               </div>
             )}
@@ -212,14 +212,14 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
             <button
               onClick={() => setCurrentExerciseIndex(Math.max(0, currentExerciseIndex - 1))}
               disabled={currentExerciseIndex === 0}
-              className="flex-1 py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold tracking-wider"
+              className="flex-1 py-3 border border-border rounded-lg text-sm hover:bg-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-bold tracking-wider"
             >
               PREVIOUS
             </button>
             
             <button
               onClick={toggleTimer}
-              className="flex-1 py-3 bg-white text-black rounded-lg text-sm hover:bg-white/90 transition-colors font-bold tracking-wider flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-primary text-primary-foreground rounded-lg text-sm hover:bg-primary/90 transition-colors font-bold tracking-wider flex items-center justify-center gap-2"
             >
               {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               {isRunning ? 'PAUSE' : 'START'}
@@ -227,7 +227,7 @@ const WorkoutTimer: React.FC<WorkoutTimerProps> = ({ exercises, onComplete, onEx
             
             <button
               onClick={handleNext}
-              className="flex-1 py-3 border border-white/30 rounded-lg text-sm hover:bg-white/5 transition-colors font-bold tracking-wider"
+              className="flex-1 py-3 border border-border rounded-lg text-sm hover:bg-muted/30 transition-colors font-bold tracking-wider"
             >
               {currentExerciseIndex === exercises.length - 1 ? 'FINISH' : 'NEXT'}
             </button>
