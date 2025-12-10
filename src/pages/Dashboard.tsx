@@ -298,8 +298,12 @@ const Dashboard = () => {
   };
 
   const prevQuestion = () => {
-    // If we're on Notes (step 6) and cardio is selected, go back to Workout Type (step 4)
+    // If cardio is selected, skip Focus Area (step 5) when navigating back
     if (questionStep === 6 && workoutType === 'cardio') {
+      // From Notes, go back to Workout Type (skip Focus Area)
+      setQuestionStep(4);
+    } else if (questionStep === 5 && workoutType === 'cardio') {
+      // Safety: if somehow on Focus Area with cardio, go to Workout Type
       setQuestionStep(4);
     } else if (questionStep > 0) {
       setQuestionStep(questionStep - 1);
