@@ -1,10 +1,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// Allowed origins for CORS
+const allowedOrigins = [
+  'https://gfaorzadtmwcoyofxhvu.lovableproject.com',
+  'https://8402f1f2-c79f-46b4-b711-1f6b23b0dd13.lovableproject.com',
+  'http://localhost:8080',
+  'http://localhost:5173',
+];
 
+function getCorsHeaders(origin: string | null) {
+  const allowedOrigin = origin && allowedOrigins.some(o => origin.startsWith(o.replace(/:\d+$/, ''))) 
+    ? origin 
+    : allowedOrigins[0];
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
+}
+
+// Input validation
 interface WorkoutRequest {
   spaceSize: 'small' | 'big';
   hasWeights: boolean;
@@ -14,7 +30,66 @@ interface WorkoutRequest {
   notes: string;
 }
 
+function validateInput(data: unknown): { valid: true; data: WorkoutRequest } | { valid: false; error: string } {
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const req = data as Record<string, unknown>;
+
+  // Validate spaceSize
+  if (!['small', 'big'].includes(req.spaceSize as string)) {
+    return { valid: false, error: 'spaceSize must be "small" or "big"' };
+  }
+
+  // Validate hasWeights
+  if (typeof req.hasWeights !== 'boolean') {
+    return { valid: false, error: 'hasWeights must be a boolean' };
+  }
+
+  // Validate intensity
+  if (!['light', 'moderate', 'intense'].includes(req.intensity as string)) {
+    return { valid: false, error: 'intensity must be "light", "moderate", or "intense"' };
+  }
+
+  // Validate duration (5-120 minutes)
+  const duration = Number(req.duration);
+  if (isNaN(duration) || duration < 5 || duration > 120) {
+    return { valid: false, error: 'duration must be between 5 and 120 minutes' };
+  }
+
+  // Validate focusArea (max 50 chars, alphanumeric and hyphens only)
+  const focusArea = String(req.focusArea || '').slice(0, 50);
+  if (!/^[a-zA-Z0-9-]*$/.test(focusArea)) {
+    return { valid: false, error: 'focusArea contains invalid characters' };
+  }
+
+  // Sanitize notes (max 500 chars, remove potential injection patterns)
+  let notes = String(req.notes || '').slice(0, 500);
+  // Remove patterns that could be prompt injection
+  notes = notes.replace(/ignore\s+(previous|all|above)/gi, '')
+               .replace(/system\s*:/gi, '')
+               .replace(/assistant\s*:/gi, '')
+               .replace(/user\s*:/gi, '')
+               .trim();
+
+  return {
+    valid: true,
+    data: {
+      spaceSize: req.spaceSize as 'small' | 'big',
+      hasWeights: req.hasWeights as boolean,
+      intensity: req.intensity as 'light' | 'moderate' | 'intense',
+      duration,
+      focusArea: focusArea || 'full-body',
+      notes,
+    }
+  };
+}
+
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,9 +100,21 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const { spaceSize, hasWeights, intensity, duration, focusArea, notes }: WorkoutRequest = await req.json();
+    // Parse and validate input
+    const rawBody = await req.json();
+    const validation = validateInput(rawBody);
+    
+    if (!validation.valid) {
+      console.error('Input validation failed:', validation.error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', message: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log('Generating workout with preferences:', { spaceSize, hasWeights, intensity, duration, focusArea, notes });
+    const { spaceSize, hasWeights, intensity, duration, focusArea, notes } = validation.data;
+
+    console.log('Generating workout with validated preferences:', { spaceSize, hasWeights, intensity, duration, focusArea, notesLength: notes.length });
 
     const systemPrompt = `You are an expert personal trainer. Generate a personalized ${duration}-minute workout plan. Return ONLY valid JSON, no markdown or explanation.`;
 
@@ -145,7 +232,7 @@ Return this exact JSON format:
         message: error instanceof Error ? error.message : 'Unknown error'
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...getCorsHeaders(req.headers.get('origin')), 'Content-Type': 'application/json' },
         status: 500,
       }
     );
