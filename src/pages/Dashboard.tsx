@@ -114,28 +114,15 @@ const Dashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        const { data, error } = await supabase
-          .from('saved_workouts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading saved workouts:', error);
-          return;
+        // Load from localStorage for now (saved_workouts table doesn't exist yet)
+        const saved = localStorage.getItem(`saved-workouts-${user.id}`);
+        if (saved) {
+          const parsedWorkouts = JSON.parse(saved);
+          setSavedWorkouts(parsedWorkouts.map((sw: any) => ({
+            ...sw,
+            savedAt: new Date(sw.savedAt)
+          })));
         }
-
-        // Convert database format to app format
-        const convertedWorkouts = data?.map(savedWorkout => ({
-          id: savedWorkout.id,
-          name: savedWorkout.name,
-          workout: savedWorkout.workout_data as unknown as Workout,
-          preferences: savedWorkout.preferences as unknown as EnhancedWorkoutPreferences,
-          savedAt: new Date(savedWorkout.created_at),
-          timesCompleted: savedWorkout.times_completed,
-        })) || [];
-
-        setSavedWorkouts(convertedWorkouts);
       }
     } catch (error) {
       console.error('Error loading saved workouts:', error);
@@ -230,15 +217,7 @@ const Dashboard = () => {
       setWorkout(savedWorkout.workout);
       setPreferences(savedWorkout.preferences);
       
-      // Update times completed in database
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('saved_workouts')
-          .update({ times_completed: savedWorkout.timesCompleted + 1 })
-          .eq('id', savedWorkout.id)
-          .eq('user_id', user.id);
-      }
       
       // Update local state
       const updatedSaved = savedWorkouts.map(sw => 
@@ -247,6 +226,11 @@ const Dashboard = () => {
           : sw
       );
       setSavedWorkouts(updatedSaved);
+      
+      // Save to localStorage
+      if (user) {
+        localStorage.setItem(`saved-workouts-${user.id}`, JSON.stringify(updatedSaved));
+      }
       
       setCurrentView('workout');
     } catch (error) {
@@ -257,16 +241,14 @@ const Dashboard = () => {
   const deleteSavedWorkout = async (workoutId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('saved_workouts')
-          .delete()
-          .eq('id', workoutId)
-          .eq('user_id', user.id);
-      }
       
       const updatedSaved = savedWorkouts.filter(sw => sw.id !== workoutId);
       setSavedWorkouts(updatedSaved);
+      
+      // Save to localStorage
+      if (user) {
+        localStorage.setItem(`saved-workouts-${user.id}`, JSON.stringify(updatedSaved));
+      }
     } catch (error) {
       console.error('Error deleting saved workout:', error);
     }

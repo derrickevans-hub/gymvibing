@@ -124,19 +124,21 @@ const WorkoutPlan = () => {
       const focusLabel = (preferences.focusArea || 'workout').replace('-', ' ').toUpperCase();
       const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
       
-      const { error } = await supabase
-        .from('saved_workouts')
-        .insert({
-          user_id: user.id,
-          name: workoutName,
-          workout_data: workout as any,
-          preferences: preferences as any,
-          times_completed: 0
-        });
-
-      if (error) {
-        throw error;
-      }
+      // Save to localStorage (saved_workouts table doesn't exist yet)
+      const existingSaved = localStorage.getItem(`saved-workouts-${user.id}`);
+      const savedWorkouts = existingSaved ? JSON.parse(existingSaved) : [];
+      
+      const newSavedWorkout = {
+        id: `workout-${Date.now()}`,
+        name: workoutName,
+        workout: workout,
+        preferences: preferences,
+        savedAt: new Date().toISOString(),
+        timesCompleted: 0
+      };
+      
+      savedWorkouts.unshift(newSavedWorkout);
+      localStorage.setItem(`saved-workouts-${user.id}`, JSON.stringify(savedWorkouts));
 
       toast({
         title: "Workout Saved",
