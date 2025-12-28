@@ -260,15 +260,6 @@ const Home = () => {
               </button>
             </div>
 
-            {/* Test Skip Button */}
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-xs text-muted-foreground"
-              onClick={() => navigate('/dashboard')}
-            >
-              Skip for testing
-            </Button>
           </form>
         </Card>
       </div>
