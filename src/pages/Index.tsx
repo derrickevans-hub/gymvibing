@@ -1,1111 +1,427 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button-minimal';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { WorkoutPreferences, Workout, UserStats } from '@/types/exercise';
-import WorkoutTimer from '@/components/WorkoutTimer';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import Auth from '@/components/Auth';
-import { 
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Environment, Float, ContactShadows } from "@react-three/drei";
+import * as THREE from "three";
+import { motion, AnimatePresence } from "framer-motion";
+import {
   Play,
-  ArrowLeft,
-  Clock,
-  MapPin,
-  Dumbbell,
-  Target,
-  Zap,
-  Heart,
+  Pause,
+  Home,
   Activity,
-  Bookmark,
-  X,
-  Loader2
-} from 'lucide-react';
+  Dumbbell,
+  User,
+  ChevronRight,
+  ChevronLeft,
+  Flame,
+  Timer,
+  Zap,
+  Sparkles,
+  ArrowLeft,
+} from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 
-import { ClaudeWorkoutGenerator as ClaudeWG } from '@/utils/claudeWorkoutGenerator';
+// --- CONFIGURATION ---
+// 1. Get these from your Lovable "Project Settings" or Supabase Dashboard
+const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Claude API Integration
-interface AIWorkoutRequest {
-  spaceSize: 'small' | 'big';
-  hasWeights: boolean;
-  intensity: 'light' | 'moderate' | 'intense';
-  duration: number;
-  focusArea: string;
-  notes: string;
+// --- THEME ---
+const THEME = {
+  bg: "#0f0f11",
+  card: "#1c1c1e",
+  primary: "#D3F36B", // Neon Lime
+  text: "#ffffff",
+  textDim: "#8E8E93",
+};
+
+// --- TYPES (Updated to match your CSV structure) ---
+interface Exercise {
+  id: number;
+  Exersice_Name: string; // Matches your DB column
+  equipment: string;
+  difficulty: string;
+  body_part: string; // Matches your DB column
+  space_requirement: string;
 }
 
-interface AIExercise {
-  name: string;
-  sets: number;
-  reps: string;
-  duration: number;
-  instructions: string[];
-  restTime: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  muscleGroups: string[];
-}
-
-interface AIWorkoutResponse {
+interface WorkoutSession {
   title: string;
-  totalDuration: number;
-  exercises: AIExercise[];
-  warmupAdvice: string;
-  cooldownAdvice: string;
-}
-
-// Claude Workout Generator Service
-class ClaudeWorkoutGenerator {
-  private static async callSupabaseEdgeFunction(preferences: AIWorkoutRequest): Promise<AIWorkoutResponse> {
-    try {
-      const response = await fetch(`https://gfaorzadtmwcoyofxhvu.supabase.co/functions/v1/generate-workout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(preferences)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return {
-        title: data.title || 'Custom Workout',
-        totalDuration: data.totalDuration,
-        exercises: data.exercises,
-        warmupAdvice: data.warmupAdvice || 'Start with light movement',
-        cooldownAdvice: data.cooldownAdvice || 'End with gentle stretching'
-      };
-    } catch (error) {
-      console.error('Supabase Edge Function Error:', error);
-      return this.getFallbackWorkout(preferences);
-    }
-  }
-
-  private static getFallbackWorkout(preferences: AIWorkoutRequest): AIWorkoutResponse {
-    // Enhanced fallback workout based on preferences
-    const exercises: AIExercise[] = [];
-    
-    // Base exercises by focus area and equipment
-    if (preferences.focusArea === 'upper-body') {
-      if (preferences.hasWeights) {
-        exercises.push({
-          name: "Dumbbell Chest Press",
-          sets: 3,
-          reps: "8-12",
-          duration: 120,
-          instructions: [
-            "Lie on your back holding dumbbells above your chest",
-            "Lower weights to chest level with control",
-            "Press back up to starting position",
-            "Keep your core engaged throughout"
-          ],
-          restTime: 60,
-          difficulty: "beginner",
-          muscleGroups: ["chest", "shoulders", "triceps"]
-        });
-      } else {
-        exercises.push({
-          name: "Push-ups",
-          sets: 3,
-          reps: "8-15",
-          duration: 90,
-          instructions: [
-            "Start in plank position with hands under shoulders",
-            "Lower your chest toward the ground",
-            "Push back up maintaining straight line",
-            "Modify on knees if needed"
-          ],
-          restTime: 45,
-          difficulty: "beginner",
-          muscleGroups: ["chest", "shoulders", "triceps", "core"]
-        });
-      }
-    }
-
-    if (preferences.focusArea === 'lower-body') {
-      exercises.push({
-        name: "Bodyweight Squats",
-        sets: 3,
-        reps: "12-20",
-        duration: 90,
-        instructions: [
-          "Stand with feet shoulder-width apart",
-          "Lower down as if sitting in a chair",
-          "Keep chest up and knees behind toes",
-          "Stand back up squeezing glutes"
-        ],
-        restTime: 45,
-        difficulty: "beginner",
-        muscleGroups: ["quads", "glutes", "hamstrings"]
-      });
-    }
-
-    if (preferences.focusArea === 'core') {
-      exercises.push({
-        name: "Plank Hold",
-        sets: 3,
-        reps: "30-60 seconds",
-        duration: 60,
-        instructions: [
-          "Start in push-up position on forearms",
-          "Keep body in straight line from head to heels",
-          "Engage core and breathe steadily",
-          "Don't let hips sag or pike up"
-        ],
-        restTime: 30,
-        difficulty: "beginner",
-        muscleGroups: ["core", "shoulders"]
-      });
-    }
-
-    if (preferences.focusArea === 'cardio') {
-      if (preferences.spaceSize === 'big') {
-        exercises.push({
-          name: "Jumping Jacks",
-          sets: 4,
-          reps: "30 seconds",
-          duration: 30,
-          instructions: [
-            "Start standing with feet together",
-            "Jump feet apart while raising arms overhead",
-            "Jump back to starting position",
-            "Maintain steady rhythm"
-          ],
-          restTime: 30,
-          difficulty: "beginner",
-          muscleGroups: ["full-body", "cardiovascular"]
-        });
-      } else {
-        exercises.push({
-          name: "High Knees in Place",
-          sets: 4,
-          reps: "30 seconds",
-          duration: 30,
-          instructions: [
-            "Stand in place and lift knees to hip level",
-            "Pump arms as if running",
-            "Land softly on balls of feet",
-            "Keep core engaged"
-          ],
-          restTime: 30,
-          difficulty: "beginner",
-          muscleGroups: ["legs", "cardiovascular"]
-        });
-      }
-    }
-
-    if (preferences.focusArea === 'mobility') {
-      exercises.push({
-        name: "Cat-Cow Stretch",
-        sets: 2,
-        reps: "10-15",
-        duration: 60,
-        instructions: [
-          "Start on hands and knees",
-          "Arch back and look up (cow pose)",
-          "Round spine and tuck chin (cat pose)",
-          "Move slowly between positions"
-        ],
-        restTime: 15,
-        difficulty: "beginner",
-        muscleGroups: ["spine", "core"]
-      });
-    }
-
-    // Add more exercises based on duration
-    if (preferences.duration >= 15) {
-      exercises.push({
-        name: "Mountain Climbers",
-        sets: 3,
-        reps: "20 seconds",
-        duration: 60,
-        instructions: [
-          "Start in plank position",
-          "Alternate bringing knees to chest quickly",
-          "Keep hips level and core tight",
-          "Maintain plank position throughout"
-        ],
-        restTime: 40,
-        difficulty: "intermediate",
-        muscleGroups: ["core", "shoulders", "legs"]
-      });
-    }
-
-    if (preferences.duration >= 20 && preferences.focusArea !== 'mobility') {
-      exercises.push({
-        name: "Lunges",
-        sets: 3,
-        reps: "8-12 each leg",
-        duration: 120,
-        instructions: [
-          "Step forward into lunge position",
-          "Lower until both knees at 90 degrees",
-          "Push back to starting position",
-          "Alternate legs or complete one side first"
-        ],
-        restTime: 45,
-        difficulty: "beginner",
-        muscleGroups: ["quads", "glutes", "hamstrings"]
-      });
-    }
-
-    // Ensure we have enough exercises for the duration
-    while (exercises.length < Math.ceil(preferences.duration / 4) && exercises.length < 8) {
-      exercises.push({
-        name: "Arm Circles",
-        sets: 2,
-        reps: "10 each direction",
-        duration: 30,
-        instructions: [
-          "Extend arms out to sides",
-          "Make small circles forward",
-          "Then reverse direction",
-          "Keep arms straight and controlled"
-        ],
-        restTime: 15,
-        difficulty: "beginner",
-        muscleGroups: ["shoulders"]
-      });
-    }
-
-    return {
-      title: `${preferences.focusArea.replace('-', ' ').toUpperCase()} ${preferences.intensity.toUpperCase()} WORKOUT`,
-      totalDuration: preferences.duration,
-      exercises: exercises.slice(0, Math.min(8, Math.ceil(preferences.duration / 3))),
-      warmupAdvice: "Start with 2-3 minutes of light movement like marching in place or arm swings",
-      cooldownAdvice: "Finish with 2-3 minutes of gentle stretching focusing on the muscles you worked"
-    };
-  }
-
-  static async generateWorkout(preferences: AIWorkoutRequest): Promise<Workout> {
-    const aiWorkout = await this.callSupabaseEdgeFunction(preferences);
-    
-    // Convert AI response to your app's Workout format
-    return {
-      id: Date.now().toString(),
-      exercises: aiWorkout.exercises.map(exercise => ({
-        id: `${exercise.name.toLowerCase().replace(/\s+/g, '-')}-${Math.random().toString(36).substr(2, 9)}`,
-        name: exercise.name,
-        duration: exercise.duration,
-        reps: typeof exercise.reps === 'string' ? parseInt(exercise.reps.split('-')[0]) : undefined,
-        sets: exercise.sets,
-        instructions: exercise.instructions.join(' '),
-        formTips: exercise.instructions,
-        category: 'main' as const,
-        restAfter: exercise.restTime
-      })),
-      totalDuration: aiWorkout.totalDuration * 60, // Convert to seconds
-      estimatedCalories: Math.round(aiWorkout.totalDuration * 8),
-      preferences: {
-        timeMinutes: preferences.duration <= 5 ? 5 : preferences.duration <= 10 ? 3 : 2,
-        spaceType: preferences.spaceSize === 'small' ? 'tight' : 'normal',
-        energyLevel: preferences.intensity === 'light' ? 'low' : preferences.intensity === 'intense' ? 'high' : 'medium',
-        equipment: preferences.hasWeights ? 'chair' : 'none'
-      }
-    };
-  }
-}
-
-// Enhanced preferences type
-interface EnhancedWorkoutPreferences extends WorkoutPreferences {
-  spaceSize: 'small' | 'big';
-  hasWeights: boolean;
-  intensity: 'light' | 'moderate' | 'intense';
   duration: number;
-  focusArea: 'upper-body' | 'lower-body' | 'core' | 'full-body' | 'cardio' | 'functional' | 'mobility';
-  notes: string;
+  exercises: Exercise[];
 }
 
-// Saved workout interface
-interface SavedWorkout {
-  id: string;
-  name: string;
-  workout: Workout;
-  preferences: EnhancedWorkoutPreferences;
-  savedAt: Date;
-  timesCompleted: number;
-}
+// --- 3D AVATAR COMPONENT ---
+// Visualizes the workout based on the name
+const RobotAvatar = ({ action }: { action: string }) => {
+  const group = useRef<THREE.Group>(null);
+  const limbs = useRef<any>({ armL: null, armR: null, legL: null, legR: null });
 
-const Index = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [currentView, setCurrentView] = useState<'home' | 'questionnaire' | 'workout-preview' | 'workout' | 'saved' | 'auth'>('home');
-  const [questionStep, setQuestionStep] = useState(0);
-  const [workout, setWorkout] = useState<Workout | null>(null);
-  const [savedWorkouts, setSavedWorkouts] = useState<SavedWorkout[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [userStats, setUserStats] = useState<UserStats>({
-    streak: 0,
-    totalWorkouts: 0,
-    totalMinutes: 0,
+  useFrame((state) => {
+    if (!group.current) return;
+    const t = state.clock.getElapsedTime();
+    const speed = 4;
+
+    // Default Idle
+    group.current.position.y = Math.sin(t) * 0.05;
+
+    // --- ANIMATION LOGIC ---
+    if (action.includes("squat") || action.includes("leg") || action.includes("lunge")) {
+      const cycle = Math.sin(t * speed);
+      group.current.position.y = cycle * 0.5 - 0.5;
+      if (limbs.current.legL) limbs.current.legL.rotation.x = cycle * 0.8;
+      if (limbs.current.legR) limbs.current.legR.rotation.x = cycle * 0.8;
+      if (limbs.current.armL) limbs.current.armL.rotation.x = -1.5 + cycle * 0.3;
+      if (limbs.current.armR) limbs.current.armR.rotation.x = -1.5 + cycle * 0.3;
+    } else if (action.includes("press") || action.includes("chest") || action.includes("push")) {
+      const cycle = Math.sin(t * speed);
+      if (limbs.current.armL) limbs.current.armL.position.y = 1.5 + cycle * 0.3;
+      if (limbs.current.armR) limbs.current.armR.position.y = 1.5 + cycle * 0.3;
+    } else if (action.includes("curl") || action.includes("bicep")) {
+      const cycle = Math.sin(t * speed);
+      if (limbs.current.armL) limbs.current.armL.rotation.x = -Math.abs(cycle * 2);
+      if (limbs.current.armR) limbs.current.armR.rotation.x = -Math.abs(Math.sin(t * speed + 1) * 2);
+    } else if (action.includes("run") || action.includes("cardio") || action.includes("walk")) {
+      const cycle = Math.sin(t * speed * 2);
+      group.current.position.y = Math.abs(cycle) * 0.1;
+      if (limbs.current.armL) limbs.current.armL.rotation.x = cycle;
+      if (limbs.current.armR) limbs.current.armR.rotation.x = -cycle;
+      if (limbs.current.legL) limbs.current.legL.rotation.x = -cycle;
+      if (limbs.current.legR) limbs.current.legR.rotation.x = cycle;
+    }
   });
 
-  const [preferences, setPreferences] = useState<EnhancedWorkoutPreferences>({
-    timeMinutes: 5,
-    spaceType: 'normal',
-    energyLevel: 'medium',
-    equipment: 'none',
-    spaceSize: 'big',
-    hasWeights: false,
-    intensity: 'moderate',
-    duration: 15,
-    focusArea: 'full-body',
-    notes: '',
+  const materialBody = new THREE.MeshStandardMaterial({ color: "#222", roughness: 0.3, metalness: 0.8 });
+  const materialNeon = new THREE.MeshStandardMaterial({
+    color: THEME.primary,
+    emissive: THEME.primary,
+    emissiveIntensity: 0.6,
   });
 
-  // Load user stats and saved workouts from localStorage and database
-  useEffect(() => {
-    // Check auth state
-    checkAuth();
-    
-    const savedStats = localStorage.getItem('vibe-gyming-stats');
-    if (savedStats) {
-      setUserStats(JSON.parse(savedStats));
-    }
-    
-    // Set up auth listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          loadSavedWorkouts();
-        } else {
-          setSavedWorkouts([]);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setUser(user);
-    if (user) {
-      loadSavedWorkouts();
-    }
-  };
-
-  const loadSavedWorkouts = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data, error } = await supabase
-          .from('saved_workouts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading saved workouts:', error);
-          return;
-        }
-
-        // Convert database format to app format
-        const convertedWorkouts = data?.map(savedWorkout => ({
-          id: savedWorkout.id,
-          name: savedWorkout.name,
-          workout: savedWorkout.workout_data as unknown as Workout,
-          preferences: savedWorkout.preferences as unknown as EnhancedWorkoutPreferences,
-          savedAt: new Date(savedWorkout.created_at),
-          timesCompleted: savedWorkout.times_completed,
-        })) || [];
-
-        setSavedWorkouts(convertedWorkouts);
-      }
-    } catch (error) {
-      console.error('Error loading saved workouts:', error);
-    }
-  };
-
-  // Save user stats to localStorage
-  const updateStats = (newStats: Partial<UserStats>) => {
-    const updated = { ...userStats, ...newStats };
-    setUserStats(updated);
-    localStorage.setItem('vibe-gyming-stats', JSON.stringify(updated));
-  };
-
-  const generateWorkout = async () => {
-    setIsGenerating(true);
-    try {
-      const aiRequest: AIWorkoutRequest = {
-        spaceSize: preferences.spaceSize,
-        hasWeights: preferences.hasWeights,
-        intensity: preferences.intensity,
-        duration: preferences.duration,
-        focusArea: preferences.focusArea,
-        notes: preferences.notes,
-      };
-      
-      const newWorkout = await ClaudeWG.generateWorkout(aiRequest);
-      
-      // Navigate to workout plan page with the generated workout
-      navigate('/workout-plan', { 
-        state: { 
-          workout: newWorkout, 
-          preferences: {
-            spaceSize: preferences.spaceSize,
-            hasWeights: preferences.hasWeights,
-            intensity: preferences.intensity,
-            duration: preferences.duration,
-            focusArea: preferences.focusArea,
-            notes: preferences.notes
-          }
-        } 
-      });
-    } catch (error) {
-      console.error('Failed to generate workout:', error);
-      toast({
-        title: "Error",
-        description: "Failed to generate workout. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const startWorkout = () => {
-    setCurrentView('workout');
-  };
-
-  const handleWorkoutComplete = () => {
-    if (workout) {
-      const today = new Date().toDateString();
-      const lastWorkout = userStats.lastWorkoutDate ? new Date(userStats.lastWorkoutDate).toDateString() : null;
-      
-      let newStreak = userStats.streak;
-      if (lastWorkout === today) {
-        // Already worked out today
-      } else if (lastWorkout === new Date(Date.now() - 86400000).toDateString()) {
-        newStreak = userStats.streak + 1;
-      } else {
-        newStreak = 1;
-      }
-
-      updateStats({
-        streak: newStreak,
-        totalWorkouts: userStats.totalWorkouts + 1,
-        totalMinutes: userStats.totalMinutes + preferences.duration,
-        lastWorkoutDate: new Date(),
-      });
-    }
-    
-    setCurrentView('home');
-    setWorkout(null);
-    setQuestionStep(0);
-  };
-
-  const startQuestionnaire = () => {
-    setCurrentView('questionnaire');
-    setQuestionStep(0);
-  };
-
-  // Save workout functions
-  const saveCurrentWorkout = () => {
-    if (!workout) return;
-    
-    const focusLabel = preferences.focusArea.replace('-', ' ').toUpperCase();
-    const workoutName = `${focusLabel} - ${preferences.duration}MIN`;
-    
-    const savedWorkout: SavedWorkout = {
-      id: Date.now().toString(),
-      name: workoutName,
-      workout,
-      preferences,
-      savedAt: new Date(),
-      timesCompleted: 0,
-    };
-    
-    const updatedSaved = [...savedWorkouts, savedWorkout];
-    setSavedWorkouts(updatedSaved);
-    localStorage.setItem('vibe-gyming-saved', JSON.stringify(updatedSaved));
-  };
-
-  const loadSavedWorkout = async (savedWorkout: SavedWorkout) => {
-    try {
-      setWorkout(savedWorkout.workout);
-      setPreferences(savedWorkout.preferences);
-      
-      // Update times completed in database
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('saved_workouts')
-          .update({ times_completed: savedWorkout.timesCompleted + 1 })
-          .eq('id', savedWorkout.id)
-          .eq('user_id', user.id);
-      }
-      
-      // Update local state
-      const updatedSaved = savedWorkouts.map(sw => 
-        sw.id === savedWorkout.id 
-          ? { ...sw, timesCompleted: sw.timesCompleted + 1 }
-          : sw
-      );
-      setSavedWorkouts(updatedSaved);
-      
-      setCurrentView('workout');
-    } catch (error) {
-      console.error('Error loading saved workout:', error);
-    }
-  };
-
-  const deleteSavedWorkout = async (workoutId: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('saved_workouts')
-          .delete()
-          .eq('id', workoutId)
-          .eq('user_id', user.id);
-      }
-      
-      const updatedSaved = savedWorkouts.filter(sw => sw.id !== workoutId);
-      setSavedWorkouts(updatedSaved);
-    } catch (error) {
-      console.error('Error deleting saved workout:', error);
-    }
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSavedWorkouts([]);
-    toast({
-      title: "Signed out",
-      description: "You've been successfully signed out.",
-    });
-  };
-
-  const nextQuestion = async () => {
-    if (questionStep < 6) {
-      setQuestionStep(questionStep + 1);
-    } else {
-      await generateWorkout();
-    }
-  };
-
-  const prevQuestion = () => {
-    if (questionStep > 0) {
-      setQuestionStep(questionStep - 1);
-    } else {
-      setCurrentView('home');
-    }
-  };
-
-  // Auth view
-  if (currentView === 'auth') {
-    return (
-      <div className="min-h-screen bg-background text-foreground font-mono">
-        <div className="max-w-md mx-auto px-6 py-12">
-          <div className="mb-8">
-            <button 
-              onClick={() => setCurrentView('home')}
-              className="p-2 hover:bg-muted rounded transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          </div>
-          <Auth onAuthSuccess={() => setCurrentView('home')} />
-        </div>
-      </div>
-    );
-  }
-
-  if (currentView === 'workout' && workout) {
-    return (
-      <WorkoutTimer
-        exercises={workout.exercises}
-        onComplete={handleWorkoutComplete}
-        onExit={() => {
-          setCurrentView('workout-preview');
-          setQuestionStep(0);
-        }}
-        onSaveWorkout={saveCurrentWorkout}
-      />
-    );
-  }
-
-  if (currentView === 'questionnaire') {
-    const questions = [
-      // Question 1: Space Size
-      {
-        title: "SPACE SIZE",
-        subtitle: "How much room do you have?",
-        icon: <MapPin className="w-6 h-6" />,
-        options: [
-          { key: 'small', label: 'SMALL SPACE', description: 'Apartment, office, hotel room' },
-          { key: 'big', label: 'BIG SPACE', description: 'Gym, yard, large room' }
-        ],
-        currentValue: preferences.spaceSize,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, spaceSize: value as 'small' | 'big' }))
-      },
-      // Question 2: Equipment
-      {
-        title: "EQUIPMENT",
-        subtitle: "What do you have available?",
-        icon: <Dumbbell className="w-6 h-6" />,
-        options: [
-          { key: 'false', label: 'NO WEIGHTS', description: 'Bodyweight only' },
-          { key: 'true', label: 'HAVE WEIGHTS', description: 'Dumbbells, kettlebells, etc.' }
-        ],
-        currentValue: preferences.hasWeights.toString(),
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, hasWeights: value === 'true' }))
-      },
-      // Question 3: Intensity
-      {
-        title: "INTENSITY",
-        subtitle: "How hard do you want to push?",
-        icon: <Zap className="w-6 h-6" />,
-        options: [
-          { key: 'light', label: 'LIGHT', description: 'Easy movement, recovery' },
-          { key: 'moderate', label: 'MODERATE', description: 'Steady effort' },
-          { key: 'intense', label: 'INTENSE', description: 'High energy, challenging' }
-        ],
-        currentValue: preferences.intensity,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, intensity: value as 'light' | 'moderate' | 'intense' }))
-      },
-      // Question 4: Duration
-      {
-        title: "DURATION",
-        subtitle: "How long can you workout?",
-        icon: <Clock className="w-6 h-6" />,
-        currentValue: preferences.duration.toString(),
-        onChange: (value: string) => {
-          const duration = parseInt(value);
-          const timeMinutes = duration <= 5 ? 5 : duration <= 10 ? 3 : 2;
-          setPreferences(prev => ({ ...prev, duration, timeMinutes: timeMinutes as 2 | 3 | 5 }));
-        },
-        isSelect: true
-      },
-      // Question 5: Focus Area - Body Parts
-      {
-        title: "FOCUS AREA",
-        subtitle: "What do you want to target?",
-        icon: <Target className="w-6 h-6" />,
-        options: [
-          { key: 'upper-body', label: 'UPPER BODY', description: 'Arms, chest, shoulders, back' },
-          { key: 'lower-body', label: 'LOWER BODY', description: 'Legs, glutes, calves' },
-          { key: 'core', label: 'CORE', description: 'Abs, obliques, lower back' },
-          { key: 'full-body', label: 'FULL BODY', description: 'Complete workout' }
-        ],
-        currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
-      },
-      // Question 6: Workout Type
-      {
-        title: "WORKOUT TYPE",
-        subtitle: "What style of training?",
-        icon: <Activity className="w-6 h-6" />,
-        options: [
-          { key: 'cardio', label: 'CARDIO', description: 'Heart rate, endurance' },
-          { key: 'functional', label: 'FUNCTIONAL', description: 'Movement patterns, strength' },
-          { key: 'mobility', label: 'MOBILITY', description: 'Flexibility, stretching' }
-        ],
-        currentValue: preferences.focusArea,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, focusArea: value as any }))
-      },
-      // Question 7: Notes
-      {
-        title: "NOTES",
-        subtitle: "Any injuries or things to avoid?",
-        icon: <Heart className="w-6 h-6" />,
-        currentValue: preferences.notes,
-        onChange: (value: string) => setPreferences(prev => ({ ...prev, notes: value })),
-        isTextArea: true
-      }
-    ];
-
-    const currentQuestion = questions[questionStep];
-    if (!currentQuestion) return null;
-
-    return (
-      <div className="min-h-screen bg-background text-foreground font-mono">
-        <div className="max-w-md mx-auto px-6 py-8">
-          {/* Progress bar */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <button 
-                onClick={prevQuestion}
-                className="p-2 hover:bg-muted rounded transition-colors"
-                disabled={isGenerating}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div className="text-sm font-medium">
-                {questionStep + 1} / {questions.length}
-              </div>
-            </div>
-            <div className="w-full bg-muted h-1 rounded">
-              <div 
-                className="bg-primary h-1 rounded transition-all duration-300"
-                style={{ width: `${((questionStep + 1) / questions.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Question */}
-          <div className="mb-12">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 border border-border rounded-lg flex items-center justify-center bg-card">
-                {currentQuestion.icon}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold tracking-wider">{currentQuestion.title}</h1>
-                <p className="text-muted-foreground text-sm">{currentQuestion.subtitle}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Options, Select, or Text Area */}
-          <div className="space-y-4 mb-12">
-            {currentQuestion.isTextArea ? (
-              <div>
-                <Textarea
-                  value={currentQuestion.currentValue as string}
-                  onChange={(e) => currentQuestion.onChange(e.target.value)}
-                  placeholder="e.g. lower back pain, knee issues, avoid jumping..."
-                  rows={4}
-                  className="w-full bg-card border-border text-foreground placeholder:text-muted-foreground focus:border-primary font-mono"
-                  disabled={isGenerating}
-                />
-                <p className="text-xs text-muted-foreground mt-2">Leave blank if none apply</p>
-              </div>
-            ) : currentQuestion.isSelect ? (
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: '5', label: '5 min' },
-                  { value: '10', label: '10 min' },
-                  { value: '15', label: '15 min' },
-                  { value: '20', label: '20 min' },
-                  { value: '25', label: '25 min' },
-                  { value: '30', label: '30 min' },
-                  { value: '45', label: '45 min' },
-                  { value: '60', label: '1 hr' },
-                  { value: '90', label: '1h 30m' }
-                ].map((duration) => (
-                  <button
-                    key={duration.value}
-                    onClick={() => {
-                      currentQuestion.onChange(duration.value);
-                      setTimeout(nextQuestion, 150);
-                    }}
-                    disabled={isGenerating}
-                    className={`p-3 rounded-lg border text-sm font-medium transition-colors disabled:opacity-50 ${
-                      currentQuestion.currentValue === duration.value
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-card text-foreground border-border hover:bg-muted'
-                    }`}
-                  >
-                    {duration.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              currentQuestion.options?.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    currentQuestion.onChange(option.key);
-                    setTimeout(nextQuestion, 150);
-                  }}
-                  disabled={isGenerating}
-                  className={`w-full p-4 border rounded-lg transition-all duration-200 text-left disabled:opacity-50 ${
-                    currentQuestion.currentValue === option.key
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-card border-border hover:border-primary hover:bg-muted'
-                  }`}
-                >
-                  <div className="font-bold text-sm tracking-wider mb-1">
-                    {option.label}
-                  </div>
-                  <div className={`text-xs ${
-                    currentQuestion.currentValue === option.key ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  }`}>
-                    {option.description}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          {/* Action button */}
-          <button
-            onClick={nextQuestion}
-            disabled={isGenerating}
-            className="w-full py-3 border border-border rounded-lg text-sm hover:bg-muted transition-colors font-bold tracking-wider bg-card disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                GENERATING WORKOUT...
-              </>
-            ) : (
-              questionStep === questions.length - 1 ? 'GENERATE WORKOUT' : 'SKIP'
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Saved workouts screen
-  if (currentView === 'saved') {
-    return (
-      <div className="min-h-screen bg-background text-foreground font-mono">
-        <div className="max-w-md mx-auto px-6 py-8">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <button 
-              onClick={() => setCurrentView('home')}
-              className="p-2 hover:bg-muted rounded transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-xl font-bold tracking-wider">SAVED WORKOUTS</h1>
-              <p className="text-muted-foreground text-sm">Your favorite routines</p>
-            </div>
-          </div>
-
-          {/* Empty state */}
-          {!user ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-6 border border-border rounded-lg flex items-center justify-center bg-card">
-                <Bookmark className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h2 className="text-lg font-bold tracking-wider mb-2">SIGN IN TO SAVE WORKOUTS</h2>
-              <p className="text-muted-foreground text-sm mb-8">Create an account to save and access your favorite routines</p>
-              <button
-                onClick={() => setCurrentView('auth')}
-                className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                SIGN IN
-              </button>
-            </div>
-          ) : savedWorkouts.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 mx-auto mb-6 border border-border rounded-lg flex items-center justify-center bg-card">
-                <Bookmark className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h2 className="text-lg font-bold tracking-wider mb-2">NO SAVED WORKOUTS YET</h2>
-              <p className="text-muted-foreground text-sm mb-8">Save your favorite routines for quick access</p>
-              <button
-                onClick={() => setCurrentView('home')}
-                className="px-6 py-3 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                CREATE YOUR FIRST WORKOUT
-              </button>
-            </div>
-          ) : (
-            /* Saved workouts list */
-            <div className="space-y-4">
-              {savedWorkouts.map((savedWorkout) => (
-                <div key={savedWorkout.id} className="p-4 border border-border rounded-lg bg-card">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-sm tracking-wider mb-1">{savedWorkout.name}</h3>
-                      <div className="text-xs text-muted-foreground">
-                        {savedWorkout.workout.exercises.length} exercises • {savedWorkout.preferences.duration} min
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Completed {savedWorkout.timesCompleted} times
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => deleteSavedWorkout(savedWorkout.id)}
-                      className="p-1 hover:bg-muted rounded transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => loadSavedWorkout(savedWorkout)}
-                    className="w-full py-2 bg-primary text-primary-foreground font-bold text-sm tracking-wider rounded hover:bg-primary/90 transition-colors"
-                  >
-                    START WORKOUT
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Home screen
   return (
-    <div className="min-h-screen bg-background text-foreground font-mono">
-      <div className="max-w-md mx-auto px-6 py-12">
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <div className="flex items-center justify-between mb-6">
-            <div></div>
-            <h1 className="text-4xl font-bold tracking-wider">VIBE GYMING</h1>
-            {user ? (
-              <button
-                onClick={signOut}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                SIGN OUT
-              </button>
-            ) : (
-              <button
-                onClick={() => setCurrentView('auth')}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                SIGN IN
-              </button>
-            )}
-          </div>
-          <div className="w-16 h-px bg-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground text-sm tracking-wide">WORKOUTS THAT MATCH YOUR ENERGY</p>
-        </div>
+    <group ref={group}>
+      <mesh position={[0, 2.2, 0]} material={materialNeon}>
+        <sphereGeometry args={[0.25, 32, 32]} />
+      </mesh>
+      <mesh position={[0, 1.2, 0]} material={materialBody}>
+        <capsuleGeometry args={[0.35, 1, 4, 8]} />
+      </mesh>
+      <mesh ref={(el) => (limbs.current.armL = el)} position={[-0.55, 1.5, 0]} material={materialBody}>
+        <capsuleGeometry args={[0.12, 1.2]} />
+      </mesh>
+      <mesh ref={(el) => (limbs.current.armR = el)} position={[0.55, 1.5, 0]} material={materialBody}>
+        <capsuleGeometry args={[0.12, 1.2]} />
+      </mesh>
+      <mesh ref={(el) => (limbs.current.legL = el)} position={[-0.25, 0.5, 0]} material={materialBody}>
+        <capsuleGeometry args={[0.15, 1.4]} />
+      </mesh>
+      <mesh ref={(el) => (limbs.current.legR = el)} position={[0.25, 0.5, 0]} material={materialBody}>
+        <capsuleGeometry args={[0.15, 1.4]} />
+      </mesh>
+    </group>
+  );
+};
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-16">
-          <div className="text-center p-4 border border-border rounded-lg bg-card">
-            <div className="text-2xl font-bold mb-1">{userStats.streak}</div>
-            <div className="text-xs text-muted-foreground tracking-wider">STREAK</div>
-          </div>
-          
-          <div className="text-center p-4 border border-border rounded-lg bg-card">
-            <div className="text-2xl font-bold mb-1">{userStats.totalWorkouts}</div>
-            <div className="text-xs text-muted-foreground tracking-wider">SESSIONS</div>
-          </div>
-          
-          <div className="text-center p-4 border border-border rounded-lg bg-card">
-            <div className="text-2xl font-bold mb-1">{userStats.totalMinutes}</div>
-            <div className="text-xs text-muted-foreground tracking-wider">MINUTES</div>
-          </div>
-        </div>
+const WorkoutVisualizer = ({ exerciseName }: { exerciseName: string }) => {
+  const animationTag = useMemo(() => {
+    const lower = exerciseName.toLowerCase();
+    if (lower.includes("squat") || lower.includes("leg") || lower.includes("lunge")) return "squat";
+    if (lower.includes("press") || lower.includes("push") || lower.includes("chest")) return "press";
+    if (lower.includes("curl") || lower.includes("row") || lower.includes("pull")) return "curl";
+    if (lower.includes("run") || lower.includes("jump") || lower.includes("cardio")) return "run";
+    return "idle";
+  }, [exerciseName]);
 
-        {/* Saved Workouts */}
-        {user && (
-          <div className="mb-16">
-            <button
-              onClick={() => setCurrentView('saved')}
-              className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Bookmark className="w-5 h-5" />
-                <div className="flex-1">
-                  <div className="font-bold text-sm tracking-wide mb-1">SAVED WORKOUTS</div>
-                  <div className="text-xs text-muted-foreground">{savedWorkouts.length} routines saved</div>
-                </div>
-              </div>
-            </button>
+  return (
+    <div className="absolute inset-0 z-0">
+      <Canvas shadows camera={{ position: [0, 2, 5], fov: 45 }}>
+        <Environment preset="city" />
+        <ambientLight intensity={0.4} />
+        <spotLight position={[5, 10, 5]} angle={0.15} penumbra={1} intensity={1} castShadow />
+        <Float speed={2} rotationIntensity={0.1} floatIntensity={0.2}>
+          <RobotAvatar action={animationTag} />
+        </Float>
+        <ContactShadows position={[0, -0.5, 0]} opacity={0.6} scale={10} blur={2} color={THEME.primary} />
+      </Canvas>
+    </div>
+  );
+};
+
+// --- SCREENS ---
+
+// 1. DASHBOARD
+const Dashboard = ({ onNavigate }: { onNavigate: (view: string) => void }) => {
+  return (
+    <div className="p-6 space-y-8 pb-32">
+      <div className="flex justify-between items-center pt-4">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-gray-700 overflow-hidden border-2 border-[#D3F36B]">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" />
           </div>
-        )}
-
-        {/* Main CTA */}
-        <div className="mb-16">
-          <button
-            onClick={startQuestionnaire}
-            disabled={isGenerating}
-            className="w-full h-16 bg-primary text-primary-foreground font-bold text-lg tracking-wider rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-6 h-6 animate-spin" />
-                GENERATING...
-              </>
-            ) : (
-              <>
-                <Play className="w-6 h-6" />
-                START WORKOUT
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Quick presets */}
-        <div className="space-y-4">
-          <h3 className="text-xs font-medium text-muted-foreground tracking-wider mb-6">QUICK OPTIONS</h3>
-          
-          <button
-            onClick={async () => {
-              setPreferences({
-                ...preferences,
-                spaceSize: 'small',
-                hasWeights: false,
-                intensity: 'light',
-                duration: 5,
-                focusArea: 'mobility',
-                notes: ''
-              });
-              await generateWorkout();
-            }}
-            disabled={isGenerating}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <div className="font-bold text-sm tracking-wide mb-1">DESK BREAK</div>
-            <div className="text-xs text-muted-foreground">5 MIN • MOBILITY • NO EQUIPMENT</div>
-          </button>
-          
-          <button
-            onClick={async () => {
-              setPreferences({
-                ...preferences,
-                spaceSize: 'big',
-                hasWeights: false,
-                intensity: 'intense',
-                duration: 10,
-                focusArea: 'cardio',
-                notes: ''
-              });
-              await generateWorkout();
-            }}
-            disabled={isGenerating}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <div className="font-bold text-sm tracking-wide mb-1">ENERGY BOOST</div>
-            <div className="text-xs text-muted-foreground">10 MIN • CARDIO • HIGH INTENSITY</div>
-          </button>
-          
-          <button
-            onClick={async () => {
-              setPreferences({
-                ...preferences,
-                spaceSize: 'big',
-                hasWeights: true,
-                intensity: 'moderate',
-                duration: 20,
-                focusArea: 'full-body',
-                notes: ''
-              });
-              await generateWorkout();
-            }}
-            disabled={isGenerating}
-            className="w-full text-left p-4 border border-border rounded-lg bg-card hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <div className="font-bold text-sm tracking-wide mb-1">FULL SESSION</div>
-            <div className="text-xs text-muted-foreground">20 MIN • FULL BODY • WITH WEIGHTS</div>
-          </button>
-        </div>
-
-        {/* Streak encouragement */}
-        {userStats.streak > 0 && (
-          <div className="mt-12 p-4 border border-border rounded-lg bg-card text-center">
-            <div className="font-bold text-sm tracking-wider mb-1">
-              {userStats.streak} DAY STREAK
-            </div>
-            <div className="text-xs text-muted-foreground">
-              KEEP THE MOMENTUM GOING
+          <div>
+            <h1 className="font-bold text-lg">HI JAMES</h1>
+            <div className="flex items-center gap-1 text-[#D3F36B] text-xs font-bold">
+              <Zap size={12} fill="currentColor" /> FITNESS FREAK
             </div>
           </div>
-        )}
+        </div>
+      </div>
+
+      <motion.div
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => onNavigate("generator")}
+        className="relative h-48 rounded-[2rem] bg-[#D3F36B] text-black p-6 flex flex-col justify-center overflow-hidden cursor-pointer"
+      >
+        <div className="absolute right-[-20px] bottom-[-20px] opacity-20 rotate-12">
+          <Activity size={180} />
+        </div>
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 bg-black/10 px-3 py-1 rounded-full text-xs font-bold mb-3">
+            <Flame size={12} fill="black" /> DAILY GOAL
+          </div>
+          <h2 className="text-3xl font-black leading-none mb-4">
+            LOWER BODY
+            <br />
+            POWER
+          </h2>
+          <div className="flex gap-4 text-xs font-bold opacity-80">
+            <span className="flex items-center gap-1">
+              <Timer size={12} /> 45 MIN
+            </span>
+            <span className="flex items-center gap-1">
+              <Zap size={12} /> 530 KCAL
+            </span>
+          </div>
+          <button className="mt-4 bg-black text-white px-6 py-2 rounded-full w-fit text-sm font-bold">
+            Start Workout
+          </button>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-[#1c1c1e] p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border border-white/5">
+          <Activity className="text-[#D3F36B]" />
+          <div className="text-xl font-bold">1,840</div>
+          <div className="text-xs text-[#8E8E93]">STEPS</div>
+        </div>
+        <div className="bg-[#1c1c1e] p-4 rounded-3xl flex flex-col items-center justify-center gap-2 border border-white/5">
+          <Flame className="text-orange-500" />
+          <div className="text-xl font-bold">870</div>
+          <div className="text-xs text-[#8E8E93]">KCAL</div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default Index;
+// 2. GENERATOR (Connected to Real Data)
+const Generator = ({ onNavigate, onGenerate }: any) => {
+  const [focus, setFocus] = useState("Full Body");
+  const [space, setSpace] = useState("Small");
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+
+    try {
+      // 1. Build Query
+      let query = supabase.from("exercises").select("*");
+
+      // 2. Apply Filters
+      if (space === "Small") {
+        query = query.eq("space_requirement", "Small");
+      } else if (space === "Medium") {
+        query = query.in("space_requirement", ["Small", "Medium"]);
+      }
+      // Large includes everything
+
+      if (focus !== "Full Body" && focus !== "Cardio") {
+        // Map UI selection to DB Body Part
+        const dbPart = focus === "Upper Body" ? "Chest" : "Glutes"; // Simplified mapping
+        query = query.eq("body_part", dbPart);
+      }
+
+      // 3. Fetch Data
+      const { data, error } = await query.limit(5);
+
+      if (error) throw error;
+
+      // 4. Create Session
+      if (data && data.length > 0) {
+        onGenerate({
+          title: `${focus} Blast`,
+          duration: 30,
+          exercises: data as Exercise[],
+        });
+      } else {
+        alert("No exercises found for these criteria!");
+        setLoading(false);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error generating workout");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-full p-6 pt-12 flex flex-col">
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={() => onNavigate("dashboard")} className="p-2 bg-[#1c1c1e] rounded-full">
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="text-2xl font-bold">Custom Session</h1>
+      </div>
+
+      {loading ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-4 border-[#D3F36B] border-t-transparent rounded-full"
+          />
+          <p className="text-[#D3F36B] font-mono animate-pulse">ANALYZING DATABASE...</p>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-8">
+          {/* Focus Area */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-[#D3F36B] uppercase">Focus Area</label>
+            <div className="grid grid-cols-2 gap-3">
+              {["Upper Body", "Lower Body", "Full Body", "Cardio"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFocus(f)}
+                  className={`p-4 rounded-2xl text-left font-bold transition-all ${focus === f ? "bg-[#D3F36B] text-black" : "bg-[#1c1c1e]"}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Space Requirement - New Feature */}
+          <div className="space-y-3">
+            <label className="text-xs font-bold text-[#D3F36B] uppercase">Space Available</label>
+            <div className="flex bg-[#1c1c1e] p-1 rounded-2xl">
+              {["Small", "Medium", "Large"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSpace(s)}
+                  className={`flex-1 py-3 rounded-xl font-bold transition-all ${space === s ? "bg-[#2c2c2e] text-white shadow-lg" : "text-[#8E8E93]"}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleGenerate}
+            className="w-full bg-[#D3F36B] text-black font-bold py-4 rounded-full flex items-center justify-center gap-2 mt-auto"
+          >
+            <Sparkles size={18} /> GENERATE WORKOUT
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 3. PLAYER
+const WorkoutPlayer = ({ session, onExit }: { session: WorkoutSession; onExit: () => void }) => {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const exercise = session.exercises[activeIdx];
+
+  return (
+    <div className="h-full relative bg-black flex flex-col">
+      <WorkoutVisualizer exerciseName={exercise.Exersice_Name} />
+      <div className="relative z-10 flex-1 flex flex-col justify-between p-6 bg-gradient-to-b from-black/60 via-transparent to-black/90">
+        <div className="flex justify-between items-start pt-8">
+          <div>
+            <h2 className="text-2xl font-bold text-white">{exercise.Exersice_Name}</h2>
+            <p className="text-[#D3F36B] font-mono text-sm uppercase">
+              {exercise.equipment} • {exercise.difficulty}
+            </p>
+          </div>
+          <button onClick={onExit} className="p-3 bg-white/10 backdrop-blur-md rounded-full text-white">
+            <Pause size={20} />
+          </button>
+        </div>
+
+        <div className="bg-[#1c1c1e]/80 backdrop-blur-xl rounded-[3rem] p-2 flex items-center justify-between shadow-2xl border border-white/10 mb-8">
+          <button
+            className="w-16 h-16 rounded-full flex items-center justify-center hover:bg-white/10"
+            onClick={() => setActiveIdx(Math.max(0, activeIdx - 1))}
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <div className="text-xl font-mono font-bold">
+            {activeIdx + 1} / {session.exercises.length}
+          </div>
+          <button
+            className="w-16 h-16 rounded-full flex items-center justify-center hover:bg-white/10"
+            onClick={() => setActiveIdx(Math.min(session.exercises.length - 1, activeIdx + 1))}
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- APP ROOT ---
+export default function App() {
+  const [view, setView] = useState("dashboard");
+  const [currentSession, setCurrentSession] = useState<WorkoutSession | null>(null);
+
+  return (
+    <div className="w-full h-screen bg-[#0f0f11] text-white font-sans overflow-hidden relative selection:bg-[#D3F36B] selection:text-black">
+      <AnimatePresence mode="wait">
+        {view === "dashboard" && (
+          <motion.div
+            key="dash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="h-full relative"
+          >
+            <Dashboard onNavigate={setView} />
+          </motion.div>
+        )}
+
+        {view === "generator" && (
+          <motion.div
+            key="gen"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="h-full"
+          >
+            <Generator
+              onNavigate={setView}
+              onGenerate={(s: WorkoutSession) => {
+                setCurrentSession(s);
+                setView("workout");
+              }}
+            />
+          </motion.div>
+        )}
+
+        {view === "workout" && currentSession && (
+          <motion.div
+            key="play"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="h-full"
+          >
+            <WorkoutPlayer session={currentSession} onExit={() => setView("dashboard")} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
