@@ -18,80 +18,32 @@ export type Database = {
         Row: {
           body_part: string
           created_at: string | null
-          difficulty: number | null
-          energy_level: string | null
+          difficulty: string | null
           equipment: string
-          form_tips: Json | null
+          Exersice_Name: string
           id: string
-          instructions: string | null
-          name: string
-          reps: number | null
-          sets: number | null
           space_requirement: string | null
           updated_at: string | null
         }
         Insert: {
           body_part: string
           created_at?: string | null
-          difficulty?: number | null
-          energy_level?: string | null
+          difficulty?: string | null
           equipment: string
-          form_tips?: Json | null
+          Exersice_Name: string
           id?: string
-          instructions?: string | null
-          name: string
-          reps?: number | null
-          sets?: number | null
           space_requirement?: string | null
           updated_at?: string | null
         }
         Update: {
           body_part?: string
           created_at?: string | null
-          difficulty?: number | null
-          energy_level?: string | null
+          difficulty?: string | null
           equipment?: string
-          form_tips?: Json | null
+          Exersice_Name?: string
           id?: string
-          instructions?: string | null
-          name?: string
-          reps?: number | null
-          sets?: number | null
           space_requirement?: string | null
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      saved_workouts: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          preferences: Json
-          times_completed: number | null
-          updated_at: string
-          user_id: string | null
-          workout_data: Json
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          preferences: Json
-          times_completed?: number | null
-          updated_at?: string
-          user_id?: string | null
-          workout_data: Json
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          preferences?: Json
-          times_completed?: number | null
-          updated_at?: string
-          user_id?: string | null
-          workout_data?: Json
         }
         Relationships: []
       }
